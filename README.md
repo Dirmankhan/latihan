@@ -47,6 +47,15 @@ perkembangan belajar dari HP atau laptop.
     Soal yang kuncinya belum terbaca ditandai kuning dan harus dilengkapi sebelum disimpan.
     Pustaka pembaca Word/PDF (`js/vendor/`, ± 2 MB) hanya dimuat saat file dipilih.
 
+    **🖼️ Soal bergambar**: di setiap soal ada tombol **Tambah gambar** (PNG/JPG/GIF/WebP), atau
+    **tempel tangkapan layar (Ctrl+V)** di kotak pertanyaan. Gambar di file **Word** ikut terimpor
+    (gambar pertama di tiap soal). Gambar besar otomatis diperkecil. Saat disimpan, gambar diunggah
+    ke folder **LMS Gambar Soal** di Google Drive pemilik sheet (dibagikan "siapa saja yang memiliki
+    link — lihat") dan link-nya dicatat di kolom **Gambar** sheet BankSoal. Kolom itu juga boleh diisi
+    manual dengan link berbagi Google Drive atau link gambar lain. Gambar yang dihapus dari soal
+    dipindahkan ke Sampah Drive. Belum didukung: gambar di pilihan jawaban/pembahasan, gambar dari PDF,
+    dan rumus Equation Word (ketik ulang atau jadikan tangkapan layar).
+
 Data siswa diisi di sheet **Siswa**:
 
 | Nama | Sekolah | Kelas | Password | Aktif (Ya/Tidak) |
@@ -184,6 +193,10 @@ agar terasa seperti aplikasi.
 > `ADMIN_PASSWORD`, jalankan **`setup`** sekali lagi (data lama tidak terhapus; kolom
 > **Sekolah** ditambahkan di sheet Hasil dan Rincian), isi sheet **Siswa**, lalu deploy **Versi baru**.
 > Semua pengguna perlu masuk ulang. Hasil latihan yang belum terkirim tetap dikirim setelah siswa masuk.
+
+> 🖼️ **Mengaktifkan gambar soal:** setelah menempel `Code.gs` versi bergambar, jalankan **`setup`**
+> sekali lagi dan izinkan akses **Google Drive** (untuk membuat folder *LMS Gambar Soal*), lalu
+> deploy **Versi baru**.
 
 ## Menambah Soal
 

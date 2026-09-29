@@ -62,7 +62,8 @@ D. Saturnus`;
     return kunci;
   }
 
-  function parse(teks) {
+  // gambar: daftar data URL dari file Word; di teks ditandai [[gambar N]].
+  function parse(teks, gambar = []) {
     let baris = String(teks || '').replace(/\r/g, '').replace(/ /g, ' ').split('\n').map((b) => b.trim());
 
     // Pisahkan bagian daftar kunci di akhir (jika ada).
@@ -109,9 +110,24 @@ D. Saturnus`;
     });
     tutup();
 
+    const RE_GAMBAR = /\s*\[\[gambar (\d+)\]\]\s*/g;
     return hasil.map((q) => {
       const peringatan = [];
-      const pertanyaan = q.pertanyaan.replace(/\n{3,}/g, '\n\n').trim();
+      // Gambar pertama di pertanyaan dipakai sebagai gambar soal.
+      let gambarSoal = '';
+      const nomorGambar = [...q.pertanyaan.matchAll(RE_GAMBAR)].map((m) => Number(m[1]));
+      if (nomorGambar.length) {
+        const src = gambar[nomorGambar[0] - 1] || '';
+        if (/^data:image\/(png|jpeg|gif|webp);/.test(src)) gambarSoal = src;
+        else peringatan.push('Gambar di soal ini berformat yang tidak bisa ditampilkan browser (mis. gambar/rumus Word lama) — tambahkan gambarnya secara manual.');
+        if (nomorGambar.length > 1) peringatan.push(`Ada ${nomorGambar.length} gambar di soal ini; hanya gambar pertama yang dipakai.`);
+      }
+      const buangTanda = (x) => String(x || '').replace(RE_GAMBAR, ' ').trim();
+      if ([...q.pilihan, q.pembahasan].some((x) => /\[\[gambar \d+\]\]/.test(x))) peringatan.push('Gambar di pilihan jawaban atau pembahasan belum didukung dan diabaikan.');
+      q.pilihan = q.pilihan.map(buangTanda);
+      q.pembahasan = buangTanda(q.pembahasan);
+      // Teks sebelum gambar menjadi pengantar (kotak bacaan), gambar tampil di bawahnya, lalu pertanyaan.
+      const pertanyaan = q.pertanyaan.replace(RE_GAMBAR, '\n\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
       let jawaban = q.jawaban || daftarKunci[q.nomor] || '';
       if (q.pilihan.length >= 2) {
         let pilihan = q.pilihan;
@@ -127,12 +143,12 @@ D. Saturnus`;
           if (idx >= 4) idx = -1;
         }
         if (idx < 0 || idx >= pilihan.length) peringatan.push('Kunci jawaban belum terbaca — pilih kunci secara manual.');
-        return { nomor: q.nomor, tipe: 'pg', pertanyaan, pilihan, jawaban: idx >= 0 && idx < pilihan.length ? 'ABCD'[idx] : '', pembahasan: q.pembahasan, peringatan };
+        return { nomor: q.nomor, tipe: 'pg', pertanyaan, pilihan, jawaban: idx >= 0 && idx < pilihan.length ? 'ABCD'[idx] : '', pembahasan: q.pembahasan, gambar: gambarSoal, peringatan };
       }
       if (q.pilihan.length === 1) peringatan.push('Hanya satu pilihan terbaca; soal dijadikan isian.');
       if (!jawaban) peringatan.push('Kunci jawaban belum terbaca — isi secara manual.');
-      return { nomor: q.nomor, tipe: 'isian', pertanyaan, jawaban, pembahasan: q.pembahasan, peringatan };
-    }).filter((q) => q.pertanyaan);
+      return { nomor: q.nomor, tipe: 'isian', pertanyaan, jawaban, pembahasan: q.pembahasan, gambar: gambarSoal, peringatan };
+    }).filter((q) => q.pertanyaan || q.gambar);
   }
 
   // ---------- Membaca file ----------
@@ -150,10 +166,18 @@ D. Saturnus`;
 
   // HTML dari Word → teks. Penomoran otomatis Word (daftar bernomor) ditulis ulang:
   // tingkat pertama menjadi 1., 2., …; tingkat kedua menjadi A., B., …
-  function htmlKeTeks(html) {
+  function htmlKeTeks(html, gambar = []) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const keluar = [];
     let nomor = 0;
+    // Teks sebuah elemen; gambar diganti penanda [[gambar N]].
+    const teksDari = (node) => [...node.childNodes].map((c) => {
+      if (c.nodeType === 3) return c.textContent;
+      if (c.nodeType !== 1 || /^(OL|UL)$/.test(c.tagName)) return '';
+      if (c.tagName === 'IMG') { gambar.push(c.getAttribute('src') || ''); return ` [[gambar ${gambar.length}]] `; }
+      if (c.tagName === 'BR') return '\n';
+      return teksDari(c);
+    }).join('');
     const jalan = (node, tingkat) => {
       node.childNodes.forEach((n) => {
         if (n.nodeType !== 1) return;
@@ -161,23 +185,32 @@ D. Saturnus`;
         if (tag === 'OL' || tag === 'UL') {
           let huruf = 0;
           [...n.children].filter((c) => c.tagName === 'LI').forEach((li) => {
-            const teksLi = [...li.childNodes].filter((c) => !(c.nodeType === 1 && /^(OL|UL)$/.test(c.tagName))).map((c) => c.textContent).join('').trim();
-            const awalan = tingkat === 0 ? `${++nomor}. ` : `${'ABCDE'[huruf++] || '-'}. `;
-            // Jangan beri nomor ganda jika teks sudah diawali nomor/huruf yang diketik manual.
-            keluar.push(RE_SOAL.test(teksLi) || RE_PILIHAN.test(teksLi) ? teksLi : awalan + teksLi);
+            const teksLi = teksDari(li).trim();
+            // Butir kosong yang hanya membungkus sub-daftar (mis. pilihan A–D setelah paragraf biasa)
+            // bukan soal baru.
+            if (teksLi) {
+              const awalan = tingkat === 0 ? `${++nomor}. ` : `${'ABCDE'[huruf++] || '-'}. `;
+              // Jangan beri nomor ganda jika teks sudah diawali nomor/huruf yang diketik manual.
+              keluar.push(RE_SOAL.test(teksLi) || RE_PILIHAN.test(teksLi) ? teksLi : awalan + teksLi);
+            }
             [...li.children].filter((c) => /^(OL|UL)$/.test(c.tagName)).forEach((sub) => jalan({ childNodes: [sub] }, tingkat + 1));
           });
           return;
         }
         if (tag === 'TABLE') {
           n.querySelectorAll('tr').forEach((tr) => {
-            [...tr.children].forEach((td) => { const t = td.innerText || td.textContent; t.split('\n').forEach((x) => keluar.push(x.trim())); });
+            [...tr.children].forEach((td) => {
+              // Paragraf di dalam sel tabel dijadikan baris tersendiri.
+              const bagian = td.querySelectorAll('p').length ? [...td.querySelectorAll('p')].map(teksDari) : [teksDari(td)];
+              bagian.join('\n').split('\n').forEach((x) => keluar.push(x.trim()));
+            });
           });
           return;
         }
         if (/^(P|H[1-6])$/.test(tag)) {
-          keluar.push(n.textContent.trim());
-          if (!n.textContent.trim()) keluar.push('');
+          const t = teksDari(n).trim();
+          keluar.push(t);
+          if (!t) keluar.push('');
           return;
         }
         jalan(n, tingkat);
@@ -190,7 +223,9 @@ D. Saturnus`;
   async function bacaDocx(file) {
     await muatSkrip('js/vendor/mammoth.browser.min.js');
     const hasil = await window.mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
-    return htmlKeTeks(hasil.value);
+    const gambar = [];
+    const teks = htmlKeTeks(hasil.value, gambar);
+    return { teks, gambar };
   }
 
   async function bacaPdf(file) {
@@ -229,11 +264,12 @@ D. Saturnus`;
     return hasil;
   }
 
+  // Mengembalikan { teks, gambar } — gambar hanya terbaca dari file Word.
   async function bacaFile(file) {
     const nama = file.name.toLowerCase();
     if (nama.endsWith('.docx')) return bacaDocx(file);
-    if (nama.endsWith('.pdf')) return bacaPdf(file);
-    if (nama.endsWith('.txt')) return file.text();
+    if (nama.endsWith('.pdf')) return { teks: await bacaPdf(file), gambar: [] };
+    if (nama.endsWith('.txt')) return { teks: await file.text(), gambar: [] };
     if (nama.endsWith('.doc')) throw new Error('File .doc (Word lama) belum didukung. Buka di Word lalu "Simpan Sebagai" .docx, atau salin-tempel teksnya.');
     throw new Error('Format file belum didukung. Gunakan .docx, .pdf, atau .txt.');
   }

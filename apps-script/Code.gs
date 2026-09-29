@@ -25,13 +25,15 @@ const SHEET_MATERI = 'Materi';
 const SHEET_RINGKASAN = 'Ringkasan';
 const SHEET_SISWA = 'Siswa';
 const SHEET_PAKET = 'Paket';
+const FOLDER_GAMBAR = 'LMS Gambar Soal';
 
 const HEADER_HASIL = ['Waktu', 'Nama', 'Kelas', 'Mapel', 'Topik', 'Jumlah Soal',
   'Benar', 'Salah', 'Nilai', 'Durasi (menit)', 'ID Sesi', 'Kategori', 'Kompetisi', 'Sekolah'];
 const HEADER_RINCIAN = ['Waktu', 'Nama', 'Mapel', 'Topik', 'No', 'Pertanyaan',
   'Jawaban Anak', 'Kunci', 'Hasil', 'ID Sesi', 'Kategori', 'Kompetisi', 'Sekolah'];
 const HEADER_SOAL = ['Mapel', 'Topik', 'Kelas', 'Tipe (pg/isian)', 'Pertanyaan',
-  'A', 'B', 'C', 'D', 'Jawaban', 'Pembahasan', 'Kategori (pelajaran/lomba)', 'Kompetisi (khusus lomba)'];
+  'A', 'B', 'C', 'D', 'Jawaban', 'Pembahasan', 'Kategori (pelajaran/lomba)', 'Kompetisi (khusus lomba)',
+  'Gambar (link, opsional)'];
 const HEADER_MATERI = ['Mapel', 'Topik', 'Kelas', 'Materi', 'Kategori (pelajaran/lomba)', 'Kompetisi (khusus lomba)'];
 const HEADER_SISWA = ['Nama', 'Sekolah', 'Kelas', 'Password', 'Aktif (Ya/Tidak)'];
 const HEADER_PAKET = ['Berlaku untuk (semua/sekolah/siswa)', 'Sekolah', 'Nama Siswa', 'Topik (diisi dari aplikasi)', 'Diperbarui'];
@@ -71,6 +73,7 @@ function setup() {
   }
   siapkanSheet_(ss, SHEET_PAKET, HEADER_PAKET);
   rahasia_();
+  folderGambar_(); // sekaligus meminta izin Google Drive untuk menyimpan gambar soal
 
   let ringkasan = ss.getSheetByName(SHEET_RINGKASAN);
   if (!ringkasan) ringkasan = ss.insertSheet(SHEET_RINGKASAN);
@@ -225,15 +228,62 @@ function barisTopik_(r, t, kolomKategori, kolomKompetisi) {
     kategori === (t.kompetisi ? 'lomba' : kodeKategori_(t.kategori));
 }
 
-/** Hapus baris (dari bawah agar nomor baris tidak bergeser). */
+/** Hapus baris (dari bawah agar nomor baris tidak bergeser). Mengembalikan baris yang dihapus. */
 function hapusBarisTopik_(sh, t, kolomKategori, kolomKompetisi) {
-  if (sh.getLastRow() < 2) return 0;
+  if (sh.getLastRow() < 2) return [];
   const nilai = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
-  let n = 0;
+  const terhapus = [];
   for (let i = nilai.length - 1; i >= 0; i--) {
-    if (barisTopik_(nilai[i], t, kolomKategori, kolomKompetisi)) { sh.deleteRow(i + 2); n++; }
+    if (barisTopik_(nilai[i], t, kolomKategori, kolomKompetisi)) { sh.deleteRow(i + 2); terhapus.push(nilai[i]); }
   }
-  return n;
+  return terhapus;
+}
+
+// ---------- Gambar soal (disimpan di Google Drive pemilik sheet) ----------
+
+function folderGambar_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('FOLDER_GAMBAR');
+  if (id) {
+    try { return DriveApp.getFolderById(id); } catch (err) { /* folder terhapus → buat baru */ }
+  }
+  const folder = DriveApp.createFolder(FOLDER_GAMBAR);
+  props.setProperty('FOLDER_GAMBAR', folder.getId());
+  return folder;
+}
+
+/** Simpan gambar (data URL base64) ke Drive, dibagikan "siapa saja yang punya link", lalu kembalikan link tampilnya. */
+function simpanGambar_(dataUrl, nama) {
+  const m = String(dataUrl).match(/^data:(image\/(?:png|jpeg|gif|webp));base64,(.+)$/);
+  if (!m) throw new Error('Format gambar tidak didukung (gunakan PNG, JPG, GIF, atau WebP)');
+  if (m[2].length > 7000000) throw new Error('Ukuran gambar terlalu besar (maks. ± 5 MB)');
+  const blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], nama);
+  const file = folderGambar_().createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w1200';
+}
+
+function idGambar_(url) {
+  const m = String(url || '').match(/[?&]id=([\w-]{20,})|\/d\/([\w-]{20,})/);
+  return m ? (m[1] || m[2]) : '';
+}
+
+/** Pindahkan ke Sampah gambar dari folder aplikasi yang tidak dipakai lagi. */
+function buangGambar_(barisLama, urlDipakai) {
+  const dipakai = {};
+  (urlDipakai || []).forEach(function (u) { const id = idGambar_(u); if (id) dipakai[id] = true; });
+  let folderId = '';
+  try { folderId = folderGambar_().getId(); } catch (err) { return; }
+  barisLama.forEach(function (r) {
+    const id = idGambar_(r[13]);
+    if (!id || dipakai[id]) return;
+    try {
+      const f = DriveApp.getFileById(id);
+      // Hanya gambar yang dibuat aplikasi (ada di folder LMS) yang dibuang.
+      const induk = f.getParents();
+      while (induk.hasNext()) { if (induk.next().getId() === folderId) { f.setTrashed(true); return; } }
+    } catch (err) { /* file sudah tidak ada */ }
+  });
 }
 
 /** Teks yang diawali "=" diberi tanda petik agar tidak dibaca sebagai rumus. */
@@ -266,17 +316,24 @@ function simpanSoal_(ss, d) {
   });
   if (!soal.length && !String(d.materi || '').trim()) throw new Error('Belum ada soal atau materi');
 
+  // Unggah gambar baru dulu; jika gagal, sheet belum berubah.
+  const gambar = soal.map(function (q, i) {
+    const g = String(q.gambar || '').trim();
+    if (!g.startsWith('data:')) return g;
+    try { return simpanGambar_(g, t.mapel + ' - ' + t.topik + ' - soal ' + (i + 1)); } catch (err) { throw new Error('Soal ' + (i + 1) + ': ' + err.message); }
+  });
+
   const bank = siapkanSheet_(ss, SHEET_SOAL, HEADER_SOAL);
   const materi = siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI);
   if (d.ganti) {
-    hapusBarisTopik_(bank, t, 11, 12);
+    buangGambar_(hapusBarisTopik_(bank, t, 11, 12), gambar);
     hapusBarisTopik_(materi, t, 4, 5);
   }
-  tulisBaris_(bank, soal.map(function (q) {
+  tulisBaris_(bank, soal.map(function (q, i) {
     const p = q.tipe === 'pg' ? (q.pilihan || []).filter(function (x) { return String(x).trim(); }) : [];
     return [teks_(t.mapel), teks_(t.topik), teks_(d.kelas), q.tipe === 'pg' ? 'pg' : 'isian', teks_(q.pertanyaan),
       teks_(p[0]), teks_(p[1]), teks_(p[2]), teks_(p[3]), teks_(q.jawaban), teks_(q.pembahasan),
-      t.kategori, teks_(t.kompetisi)];
+      t.kategori, teks_(t.kompetisi), gambar[i]];
   }));
   if (String(d.materi || '').trim()) {
     if (!d.ganti) hapusBarisTopik_(materi, t, 4, 5);
@@ -348,8 +405,9 @@ function doPost(e) {
       try {
         if (aksi === 'soal-simpan') return json_({ ok: true, jumlah: simpanSoal_(ss, data) });
         const t = { mapel: data.mapel, topik: data.topik, kompetisi: String(data.kompetisi || ''), kategori: data.kategori };
-        return json_({ ok: true, jumlah: hapusBarisTopik_(siapkanSheet_(ss, SHEET_SOAL, HEADER_SOAL), t, 11, 12) +
-          hapusBarisTopik_(siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI), t, 4, 5) });
+        const lama = hapusBarisTopik_(siapkanSheet_(ss, SHEET_SOAL, HEADER_SOAL), t, 11, 12);
+        buangGambar_(lama, []);
+        return json_({ ok: true, jumlah: lama.length + hapusBarisTopik_(siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI), t, 4, 5).length });
       } finally {
         lock.releaseLock();
       }

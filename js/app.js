@@ -56,6 +56,13 @@
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) +
       ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   }
+  // Link gambar: tautan berbagi Google Drive diubah menjadi link tampil.
+  function urlGambar(u) {
+    const s = String(u || '').trim();
+    if (!s || s.startsWith('data:image/')) return s;
+    const m = s.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]{20,})/);
+    return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1200` : (/^https?:\/\//.test(s) ? s : '');
+  }
   function idTopik(kategori, kompetisi, mapel, topik) { return [kategori || 'pelajaran', kompetisi || '', mapel, topik].join('::'); }
   // Nama mapel lengkap untuk tampilan, mis. "KMSI 2026 · Matematika".
   function judulMapel(kompetisi, mapel) { return kompetisi ? kompetisi + ' · ' + mapel : mapel; }
@@ -115,11 +122,11 @@
         cariTopik(r[0], r[1], r[2], r[4], r[5]).materi = String(r[3] || '');
       });
       (dariSheet.soal || []).forEach((r) => {
-        const [mapel, topik, kelas, tipe, pertanyaan, a, b, c, d, jawaban, pembahasan, kategori, kompetisi] = r;
+        const [mapel, topik, kelas, tipe, pertanyaan, a, b, c, d, jawaban, pembahasan, kategori, kompetisi, gambar] = r;
         if (!mapel || !topik || !pertanyaan) return;
         const t = cariTopik(mapel, topik, kelas, kategori, kompetisi);
         const jenis = normal(tipe) === 'isian' ? 'isian' : 'pg';
-        const soal = { tipe: jenis, pertanyaan: String(pertanyaan), jawaban: String(jawaban ?? '').trim(), pembahasan: String(pembahasan || '') };
+        const soal = { tipe: jenis, pertanyaan: String(pertanyaan), jawaban: String(jawaban ?? '').trim(), pembahasan: String(pembahasan || ''), gambar: urlGambar(gambar) };
         if (jenis === 'pg') soal.pilihan = [a, b, c, d].map((x) => String(x ?? '')).filter((x) => x !== '');
         t.soal.push(soal);
       });
@@ -478,6 +485,9 @@
     $('#kuis-bacaan').hidden = potong === -1;
     $('#kuis-bacaan').textContent = potong === -1 ? '' : soal.pertanyaan.slice(0, potong);
     $('#kuis-pertanyaan').textContent = potong === -1 ? soal.pertanyaan : soal.pertanyaan.slice(potong + 2);
+    const gambar = urlGambar(soal.gambar);
+    $('#kuis-gambar-link').hidden = !gambar;
+    if (gambar) { $('#kuis-gambar').src = gambar; $('#kuis-gambar-link').href = gambar; } else $('#kuis-gambar').removeAttribute('src');
     const wadah = $('#kuis-jawaban');
     wadah.innerHTML = '';
     if (soal.tipe === 'isian') {
@@ -563,6 +573,7 @@
       const r = h.rincian[i];
       return `<li class="${r.benar ? 'benar' : 'salah'}">
         <div class="q">${esc(soal.pertanyaan)}</div>
+        ${urlGambar(soal.gambar) ? `<img class="gambar-bahas" src="${esc(urlGambar(soal.gambar))}" alt="Gambar soal" loading="lazy">` : ''}
         <div class="a">${r.benar ? '✅' : '❌'} Jawabanmu: <b>${esc(r.jawabanAnak || '(kosong)')}</b>${r.benar ? '' : ` · Kunci: <b>${esc(r.kunci)}</b>`}</div>
         ${soal.pembahasan ? `<div class="a">💡 ${esc(soal.pembahasan)}</div>` : ''}
       </li>`;
@@ -854,6 +865,14 @@
         ? `<div class="small muted">Isi pilihan jawaban, lalu klik bulatan pada jawaban yang benar.</div>` +
           ['A', 'B', 'C', 'D'].map((h) => `<div class="pilihan-edit"><input type="radio" name="${nama}" value="${h}" aria-label="Kunci ${h}"><span class="huruf">${h}</span><input type="text" class="p" data-h="${h}" placeholder="Pilihan ${h}${h > 'B' ? ' (boleh kosong)' : ''}"></div>`).join('')
         : `<label>Kunci jawaban <input type="text" class="kunci-isian" placeholder="Jika ada beberapa jawaban benar, pisahkan dengan | (mis. 63|enam puluh tiga)"></label>`}
+      <div class="gambar-edit">
+        <img class="pratinjau" alt="Gambar soal" hidden>
+        <div class="aksi-gambar">
+          <label class="btn sm pilih-gambar">🖼️ <span>Tambah gambar</span><input type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden></label>
+          <button type="button" class="btn sm bahaya hapus-gambar" hidden>Hapus gambar</button>
+          <span class="small muted">atau tempel tangkapan layar (Ctrl+V) di kotak pertanyaan</span>
+        </div>
+      </div>
       <label>Pembahasan (opsional) <textarea class="bahas" rows="2"></textarea></label>`;
     k.querySelector('.q').value = isi.pertanyaan || '';
     k.querySelector('.bahas').value = isi.pembahasan || '';
@@ -863,6 +882,24 @@
       if (r) r.checked = true;
     } else k.querySelector('.kunci-isian').value = isi.jawaban || '';
     k.querySelector('.hapus-soal').onclick = () => { k.remove(); nomoriSoal(); };
+    const pasang = (src) => {
+      k.dataset.gambar = src || '';
+      const img = k.querySelector('.pratinjau');
+      img.hidden = !src;
+      if (src) img.src = urlGambar(src); else img.removeAttribute('src');
+      k.querySelector('.hapus-gambar').hidden = !src;
+      k.querySelector('.pilih-gambar span').textContent = src ? 'Ganti gambar' : 'Tambah gambar';
+    };
+    const dariFile = async (file) => {
+      try { pasang(await siapkanGambar(file)); } catch (e) { alert(e.message); }
+    };
+    k.querySelector('.pilih-gambar input').onchange = (e) => { if (e.target.files[0]) dariFile(e.target.files[0]); e.target.value = ''; };
+    k.querySelector('.hapus-gambar').onclick = () => pasang('');
+    k.addEventListener('paste', (e) => {
+      const item = [...(e.clipboardData?.items || [])].find((x) => x.type.startsWith('image/'));
+      if (item) { e.preventDefault(); dariFile(item.getAsFile()); }
+    });
+    pasang(isi.gambar || '');
     $('#s-daftar-soal').appendChild(k);
     nomoriSoal();
     return k;
@@ -873,11 +910,11 @@
     return [...document.querySelectorAll('#s-daftar-soal .kartu-soal')].map((k, i) => {
       const pertanyaan = k.querySelector('.q').value.trim();
       const pembahasan = k.querySelector('.bahas').value.trim();
-      if (!pertanyaan) throw new Error(`Soal ${i + 1}: pertanyaan masih kosong.`);
+      if (!pertanyaan && !k.dataset.gambar) throw new Error(`Soal ${i + 1}: pertanyaan masih kosong.`);
       if (k.dataset.tipe === 'isian') {
         const jawaban = k.querySelector('.kunci-isian').value.trim();
         if (!jawaban) throw new Error(`Soal ${i + 1}: kunci jawaban masih kosong.`);
-        return { tipe: 'isian', pertanyaan, jawaban, pembahasan };
+        return { tipe: 'isian', pertanyaan, jawaban, pembahasan, gambar: k.dataset.gambar || '' };
       }
       const terisi = [...k.querySelectorAll('.p')].map((inp) => ({ h: inp.dataset.h, v: inp.value.trim() })).filter((x) => x.v);
       if (terisi.length < 2) throw new Error(`Soal ${i + 1}: isi minimal 2 pilihan jawaban.`);
@@ -885,12 +922,42 @@
       const kunci = k.querySelector('input[type=radio]:checked');
       const idx = kunci ? terisi.findIndex((x) => x.h === kunci.value) : -1;
       if (idx === -1) throw new Error(`Soal ${i + 1}: pilih kunci jawaban (klik bulatan di samping pilihan yang benar, dan pilihan itu tidak boleh kosong).`);
-      return { tipe: 'pg', pertanyaan, pilihan: terisi.map((x) => x.v), jawaban: HURUF[idx], pembahasan };
+      return { tipe: 'pg', pertanyaan, pilihan: terisi.map((x) => x.v), jawaban: HURUF[idx], pembahasan, gambar: k.dataset.gambar || '' };
     });
   }
 
   // Kartu soal yang masih kosong (belum diisi apa pun).
-  const kartuKosong = (k) => ![...k.querySelectorAll('textarea, input[type=text]')].some((x) => x.value.trim());
+  const kartuKosong = (k) => !k.dataset.gambar && ![...k.querySelectorAll('textarea, input[type=text]')].some((x) => x.value.trim());
+
+  // Gambar dari file/clipboard → data URL. Gambar besar diperkecil (maks. 1200 px, JPEG) agar cepat dimuat.
+  function siapkanGambar(file) {
+    return new Promise((ok, gagal) => {
+      if (!file || !/^image\/(png|jpeg|gif|webp)$/.test(file.type)) { gagal(new Error('Gunakan gambar PNG, JPG, GIF, atau WebP.')); return; }
+      const baca = new FileReader();
+      baca.onerror = () => gagal(new Error('Gambar tidak dapat dibaca.'));
+      baca.onload = () => kecilkanGambar(baca.result, file.size).then(ok, gagal);
+      baca.readAsDataURL(file);
+    });
+  }
+  function kecilkanGambar(dataUrl, ukuran) {
+    return new Promise((ok) => {
+      if ((ukuran ?? dataUrl.length * 0.75) <= 300 * 1024 || dataUrl.startsWith('data:image/gif')) { ok(dataUrl); return; }
+      const img = new Image();
+      img.onload = () => {
+        const skala = Math.min(1, 1200 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * skala);
+        c.height = Math.round(img.height * skala);
+        const g = c.getContext('2d');
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        ok(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => ok(dataUrl);
+      img.src = dataUrl;
+    });
+  }
 
   async function imporSoal() {
     const pesan = $('#impor-pesan');
@@ -899,12 +966,14 @@
     try {
       if (file) {
         pesan.textContent = `Membaca ${file.name}…`;
-        teks = await window.IMPOR_SOAL.bacaFile(file);
+        const isi = await window.IMPOR_SOAL.bacaFile(file);
+        teks = isi.teks;
+        state.gambarImpor = await Promise.all(isi.gambar.map((g) => (/^data:image\/(png|jpeg|webp);/.test(g) ? kecilkanGambar(g) : g)));
         $('#impor-teks').value = teks;
         $('#impor-file').value = '';
       }
       if (!teks.trim()) throw new Error('Pilih file atau tempel teks soal terlebih dahulu.');
-      const hasil = window.IMPOR_SOAL.parse(teks);
+      const hasil = window.IMPOR_SOAL.parse(teks, state.gambarImpor || []);
       if (!hasil.length) throw new Error('Tidak ada soal yang terbaca. Pastikan setiap soal diawali nomor, mis. "1." atau "1)".');
       document.querySelectorAll('#s-daftar-soal .kartu-soal').forEach((k) => { if (kartuKosong(k)) k.remove(); });
       let perluCek = 0;
@@ -964,9 +1033,9 @@
     ['#s-kategori', '#s-kompetisi', '#s-mapel', '#s-topik'].forEach((s) => ($(s).disabled = true));
     $('#s-daftar-soal').innerHTML = '';
     t.soal.forEach((r) => {
-      const [, , , tipe, pertanyaan, a, b, c, d, jawaban, pembahasan] = r;
-      if (normal(tipe) === 'isian') tambahKartuSoal('isian', { pertanyaan, jawaban: String(jawaban ?? ''), pembahasan });
-      else tambahKartuSoal('pg', { pertanyaan, pilihan: [a, b, c, d].map((x) => String(x ?? '')), jawaban, pembahasan });
+      const [, , , tipe, pertanyaan, a, b, c, d, jawaban, pembahasan, , , gambar] = r;
+      if (normal(tipe) === 'isian') tambahKartuSoal('isian', { pertanyaan, jawaban: String(jawaban ?? ''), pembahasan, gambar: urlGambar(gambar) });
+      else tambahKartuSoal('pg', { pertanyaan, pilihan: [a, b, c, d].map((x) => String(x ?? '')), jawaban, pembahasan, gambar: urlGambar(gambar) });
     });
     if (!t.soal.length) tambahKartuSoal('pg');
     $('#s-pesan').textContent = '';
