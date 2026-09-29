@@ -21,6 +21,31 @@ perkembangan belajar dari HP atau laptop.
     dan pembahasan. Soal tersimpan di sheet **BankSoal**/**Materi**. Topik baru otomatis dimasukkan ke
     paket yang sudah ada (bisa dimatikan). Topik buatan admin bisa **diubah** atau **dihapus** dari
     daftar *Soal Buatan Admin*; soal bawaan dari buku tidak bisa diubah di sini.
+    **📥 Impor banyak soal sekaligus**: salin-tempel teks dari Word/Google Docs, atau pilih file
+    **.docx**, **.pdf** (berisi teks, bukan hasil scan), atau **.txt**. Format yang dikenali:
+
+    ```
+    1. Hasil dari −8 + 5 adalah ...
+    A. −13
+    B. −3
+    C. 3
+    D. 13
+    Kunci: B
+    Pembahasan: ...
+
+    2. Ibu kota NTB adalah ...
+    A. Bima  B. Mataram  C. Sumbawa  D. Praya     ← pilihan sebaris juga bisa
+
+    3. Air membeku pada suhu ... °C              ← tanpa pilihan = soal isian
+    Kunci: 0|nol
+
+    Kunci Jawaban                                 ← atau daftar kunci di akhir
+    1. B  2. B
+    ```
+
+    Penomoran otomatis Word ikut terbaca. Kunci juga bisa ditandai dengan `*` di pilihan yang benar.
+    Soal yang kuncinya belum terbaca ditandai kuning dan harus dilengkapi sebelum disimpan.
+    Pustaka pembaca Word/PDF (`js/vendor/`, ± 2 MB) hanya dimuat saat file dipilih.
 
 Data siswa diisi di sheet **Siswa**:
 
@@ -197,6 +222,8 @@ js/config.js          Pengaturan (URL Apps Script, token, KKTP)
 js/bank-soal.js       Materi & soal bawaan (umum + KSM)
 js/soal-buku/         Soal berbasis buku teks kelas 7 (Matematika, IPA, IPS, PAI, KKA)
 js/soal-kmsi-level4.js Soal KMSI 2026 Level 4
+js/impor-soal.js      Pembaca soal dari teks/Word/PDF (admin)
+js/vendor/            mammoth.js (Word) & pdf.js (PDF), beserta lisensinya
 js/app.js             Logika aplikasi
 apps-script/Code.gs   Backend Google Sheet
 ```

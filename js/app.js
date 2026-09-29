@@ -889,6 +889,42 @@
     });
   }
 
+  // Kartu soal yang masih kosong (belum diisi apa pun).
+  const kartuKosong = (k) => ![...k.querySelectorAll('textarea, input[type=text]')].some((x) => x.value.trim());
+
+  async function imporSoal() {
+    const pesan = $('#impor-pesan');
+    const file = $('#impor-file').files[0];
+    let teks = $('#impor-teks').value;
+    try {
+      if (file) {
+        pesan.textContent = `Membaca ${file.name}…`;
+        teks = await window.IMPOR_SOAL.bacaFile(file);
+        $('#impor-teks').value = teks;
+        $('#impor-file').value = '';
+      }
+      if (!teks.trim()) throw new Error('Pilih file atau tempel teks soal terlebih dahulu.');
+      const hasil = window.IMPOR_SOAL.parse(teks);
+      if (!hasil.length) throw new Error('Tidak ada soal yang terbaca. Pastikan setiap soal diawali nomor, mis. "1." atau "1)".');
+      document.querySelectorAll('#s-daftar-soal .kartu-soal').forEach((k) => { if (kartuKosong(k)) k.remove(); });
+      let perluCek = 0;
+      hasil.forEach((q) => {
+        const k = tambahKartuSoal(q.tipe, q);
+        if (q.peringatan.length) {
+          perluCek++;
+          k.classList.add('perlu-cek');
+          k.querySelector('.kepala-soal').insertAdjacentHTML('afterend', `<div class="catatan-cek">⚠️ ${q.peringatan.map(esc).join(' ')}</div>`);
+        }
+      });
+      const pg = hasil.filter((q) => q.tipe === 'pg').length;
+      pesan.textContent = `✅ ${hasil.length} soal terbaca (${pg} pilihan ganda, ${hasil.length - pg} isian) dan ditambahkan ke formulir di bawah.` +
+        (perluCek ? ` ${perluCek} soal ditandai kuning perlu dicek.` : '') + ' Periksa dulu, lalu klik Simpan Soal.';
+      $('#s-daftar-soal').scrollIntoView({ behavior: 'smooth' });
+    } catch (e) {
+      pesan.textContent = '⚠️ ' + (e.message || 'File tidak dapat dibaca.');
+    }
+  }
+
   function kosongkanFormSoal() {
     state.editSoal = null;
     $('#form-soal').reset();
@@ -1126,6 +1162,9 @@
     $('#s-tambah-isian').onclick = () => tambahKartuSoal('isian').querySelector('.q').focus();
     $('#s-batal').onclick = () => { if (confirm('Kosongkan formulir?')) { kosongkanFormSoal(); $('#s-pesan').textContent = ''; } };
     $('#form-soal').onsubmit = simpanSoalAdmin;
+    $('#impor-baca').onclick = imporSoal;
+    $('#impor-file').onchange = imporSoal;
+    $('#impor-contoh').onclick = () => { $('#impor-teks').value = window.IMPOR_SOAL.CONTOH; $('#impor-pesan').textContent = 'Contoh format sudah diisi. Klik "Baca soal" untuk mencoba.'; };
     $('#f-sekolah').onchange = () => { isiFilterSiswa(); renderRekap(); };
     $('#f-siswa').onchange = renderRekap;
     $('#f-kategori').onchange = renderRekap;

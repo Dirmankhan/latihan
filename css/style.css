@@ -245,3 +245,13 @@ textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
 #form-soal input, #form-soal textarea, #form-soal select { font-weight: 400; }
 #form-soal h3 { margin: 18px 0 0; }
 .aksi-tabel { white-space: nowrap; text-align: right; }
+
+/* Impor soal */
+.impor { border: 1px dashed var(--primary); border-radius: 12px; padding: 10px 14px; margin: 14px 0; background: var(--bg); }
+.impor summary { cursor: pointer; font-weight: 700; color: var(--primary); }
+.impor[open] summary { margin-bottom: 6px; }
+.petunjuk-impor ul { margin: 4px 0 6px; padding-left: 1.2em; }
+.petunjuk-impor code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; }
+.kartu-soal.perlu-cek { border-left-color: var(--warn); background: #fffbeb; }
+@media (prefers-color-scheme: dark) { .kartu-soal.perlu-cek { background: #3b2f0b; } }
+.kartu-soal .catatan-cek { color: var(--warn); font-size: .85rem; font-weight: 600; margin-top: 4px; }

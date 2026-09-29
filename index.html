@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Belajar Mandiri</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
-  <link rel="stylesheet" href="css/style.css?v=20260929e">
+  <link rel="stylesheet" href="css/style.css?v=20260929f">
 </head>
 <body>
   <header class="topbar">
@@ -207,6 +207,34 @@
           <label>Materi ringkas (opsional)
             <textarea id="s-materi" rows="4" placeholder="Baris kosong = paragraf baru. Awali baris dengan - untuk daftar, **teks** untuk tebal."></textarea>
           </label>
+          <details class="impor" id="impor-kotak">
+            <summary>📥 Impor banyak soal sekaligus (dari Word, PDF, atau salin-tempel)</summary>
+            <p class="small">Cara termudah: buka file soal di Word/Google Docs, <b>salin semua (Ctrl+A, Ctrl+C)</b>, lalu
+              <b>tempel</b> di kotak bawah. Atau pilih file <b>.docx</b>, <b>.pdf</b>, atau <b>.txt</b>.</p>
+            <label>Pilih file
+              <input type="file" id="impor-file" accept=".docx,.pdf,.txt">
+            </label>
+            <label>atau tempel teks soal di sini
+              <textarea id="impor-teks" rows="8" placeholder="1. Pertanyaan ...&#10;A. pilihan&#10;B. pilihan&#10;C. pilihan&#10;D. pilihan&#10;Kunci: B"></textarea>
+            </label>
+            <div class="aksi">
+              <button class="btn sm primary" id="impor-baca" type="button">🔍 Baca soal</button>
+              <button class="btn sm" id="impor-contoh" type="button">Isi contoh format</button>
+            </div>
+            <div class="small muted petunjuk-impor">
+              <b>Format yang dikenali:</b>
+              <ul>
+                <li>Setiap soal diawali nomor: <code>1.</code> atau <code>1)</code></li>
+                <li>Pilihan <code>A.</code> sampai <code>D.</code> (boleh huruf kecil, per baris atau sebaris)</li>
+                <li>Kunci: baris <code>Kunci: B</code>, atau tanda <code>*</code> di pilihan yang benar,
+                  atau daftar di akhir dokumen di bawah judul <code>Kunci Jawaban</code> (<code>1. B  2. C …</code>)</li>
+                <li>Soal tanpa pilihan menjadi soal isian; <code>Kunci: 50|lima puluh</code> untuk beberapa jawaban benar</li>
+                <li>Opsional: <code>Pembahasan: …</code></li>
+              </ul>
+              Gambar, rumus Equation, dan PDF hasil scan tidak ikut terbaca. Semua soal hasil impor bisa diperiksa dan diperbaiki dulu sebelum disimpan.
+            </div>
+            <p class="small" id="impor-pesan" role="status"></p>
+          </details>
           <h3>Soal</h3>
           <div id="s-daftar-soal"></div>
           <div class="aksi">
@@ -253,15 +281,16 @@
     </section>
   </main>
 
-  <script src="js/config.js?v=20260929e"></script>
-  <script src="js/bank-soal.js?v=20260929e"></script>
-  <script src="js/soal-buku/_util.js?v=20260929e"></script>
-  <script src="js/soal-buku/matematika.js?v=20260929e"></script>
-  <script src="js/soal-buku/ipa.js?v=20260929e"></script>
-  <script src="js/soal-buku/ips.js?v=20260929e"></script>
-  <script src="js/soal-buku/pai.js?v=20260929e"></script>
-  <script src="js/soal-buku/kka.js?v=20260929e"></script>
-  <script src="js/soal-kmsi-level4.js?v=20260929e"></script>
-  <script src="js/app.js?v=20260929e"></script>
+  <script src="js/config.js?v=20260929f"></script>
+  <script src="js/bank-soal.js?v=20260929f"></script>
+  <script src="js/soal-buku/_util.js?v=20260929f"></script>
+  <script src="js/soal-buku/matematika.js?v=20260929f"></script>
+  <script src="js/soal-buku/ipa.js?v=20260929f"></script>
+  <script src="js/soal-buku/ips.js?v=20260929f"></script>
+  <script src="js/soal-buku/pai.js?v=20260929f"></script>
+  <script src="js/soal-buku/kka.js?v=20260929f"></script>
+  <script src="js/soal-kmsi-level4.js?v=20260929f"></script>
+  <script src="js/impor-soal.js?v=20260929f"></script>
+  <script src="js/app.js?v=20260929f"></script>
 </body>
 </html>
