@@ -35,16 +35,16 @@ function setup() {
   const soal = siapkanSheet_(ss, SHEET_SOAL, HEADER_SOAL);
   if (soal.getLastRow() === 1) {
     soal.getRange(2, 1, 2, HEADER_SOAL.length).setValues([
-      ['Matematika', 'Contoh dari Sheet', '5', 'pg', 'Hasil dari 12 × 5 adalah ...',
+      ['Matematika', 'Contoh dari Sheet', '7', 'pg', 'Hasil dari 12 × 5 adalah ...',
         '50', '60', '70', '17', 'B', '12 × 5 = 60.'],
-      ['Matematika', 'Contoh dari Sheet', '5', 'isian', 'Hasil dari 100 − 37 adalah ...',
+      ['Matematika', 'Contoh dari Sheet', '7', 'isian', 'Hasil dari 100 − 37 adalah ...',
         '', '', '', '', '63', '100 − 37 = 63.'],
     ]);
   }
   const materi = siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI);
   if (materi.getLastRow() === 1) {
     materi.getRange(2, 1, 1, 4).setValues([[
-      'Matematika', 'Contoh dari Sheet', '5',
+      'Matematika', 'Contoh dari Sheet', '7',
       'Ini contoh materi yang ditulis di Google Sheet.\n\n- Baris yang diawali tanda minus menjadi daftar\n- Gunakan **teks** untuk huruf tebal',
     ]]);
   }

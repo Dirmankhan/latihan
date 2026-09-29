@@ -125,6 +125,9 @@ form .btn { width: 100%; margin-top: 8px; }
 .nomor-soal button.terjawab { background: var(--primary-soft); border-color: var(--primary); }
 .nomor-soal button.aktif { outline: 2px solid var(--primary); }
 .pertanyaan { font-size: 1.2rem; font-weight: 600; white-space: pre-line; }
+/* Teks Arab: arah baca otomatis dan huruf lebih besar */
+.pilihan span:last-child, .materi li, .pembahasan .a { unicode-bidi: plaintext; }
+:lang(ar), .arab { font-size: 1.25em; }
 .pilihan {
   display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left;
   padding: 13px 14px; margin: 8px 0; border: 2px solid var(--line); border-radius: 12px;

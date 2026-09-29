@@ -38,7 +38,7 @@
     return a;
   }
   function normal(s) {
-    return String(s ?? '').toLowerCase().replace(/\s+/g, ' ').replace(/,/g, '.').trim();
+    return String(s ?? '').toLowerCase().replace(/\s+/g, ' ').replace(/,/g, '.').replace(/[−–]/g, '-').trim();
   }
   function formatWaktu(detik) {
     const m = Math.floor(detik / 60), s = detik % 60;

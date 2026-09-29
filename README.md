@@ -4,6 +4,24 @@ Aplikasi web sederhana untuk **membaca materi** dan **latihan soal**. Setiap has
 latihan otomatis tercatat di **Google Sheet**, sehingga orang tua bisa memantau
 perkembangan belajar dari HP atau laptop.
 
+## Isi Bawaan: Kelas 7 (1 MTs) — Semester 1
+
+| Mapel | Topik | Soal |
+|---|---|---|
+| Matematika | Bilangan Bulat; Rasio dan Perbandingan | 10 + 8 |
+| IPA | Besaran, Satuan, dan Metode Ilmiah; Zat dan Perubahannya | 9 + 8 |
+| IPS | Letak Wilayah Indonesia | 8 |
+| Bahasa Indonesia | Teks Deskripsi | 7 |
+| Bahasa Inggris | About Me (Simple Present) | 8 |
+| Al-Qur'an Hadis | Hukum Nun Mati dan Tanwin | 8 |
+| Akidah Akhlak | Sifat Wajib Allah | 9 |
+| Fikih | Taharah (Najis, Wudu, Tayamum) | 8 |
+| Sejarah Kebudayaan Islam | Dakwah Nabi Muhammad di Makkah | 8 |
+| Bahasa Arab | At-Ta'aruf (Perkenalan) | 7 |
+
+Mengacu pada Kurikulum Merdeka kelas 7 dan mapel PAI/Bahasa Arab madrasah (KMA 347/2022).
+Sesuaikan dengan urutan materi di madrasah anak Anda melalui sheet **BankSoal**.
+
 ## Fitur
 
 - Masuk dengan nama & kelas (tanpa kata sandi, cocok untuk anak)
