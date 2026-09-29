@@ -16,6 +16,11 @@ perkembangan belajar dari HP atau laptop.
   - **📦 Paket Soal**: mencentang topik yang boleh dikerjakan, untuk **semua siswa**, **satu sekolah**,
     atau **satu siswa**. Urutan yang berlaku: paket siswa → paket sekolah → paket semua siswa →
     tanpa paket (semua topik terbuka). Tombol *Hapus paket* mengembalikan ke tingkat di atasnya.
+  - **➕ Tambah Soal**: membuat topik baru atau menambah soal ke topik yang sudah ada (pilihan ganda
+    2–4 pilihan, atau isian dengan beberapa jawaban benar dipisah `|`), lengkap dengan materi ringkas
+    dan pembahasan. Soal tersimpan di sheet **BankSoal**/**Materi**. Topik baru otomatis dimasukkan ke
+    paket yang sudah ada (bisa dimatikan). Topik buatan admin bisa **diubah** atau **dihapus** dari
+    daftar *Soal Buatan Admin*; soal bawaan dari buku tidak bisa diubah di sini.
 
 Data siswa diisi di sheet **Siswa**:
 

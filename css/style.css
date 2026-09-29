@@ -82,7 +82,7 @@ input:focus, select:focus { outline: 2px solid var(--primary); border-color: tra
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn.sm { padding: 7px 12px; font-size: .9rem; }
 .link { background: none; border: 0; color: var(--primary); cursor: pointer; padding: 0; font-weight: 600; }
-form .btn { width: 100%; margin-top: 8px; }
+#form-masuk .btn, #form-admin .btn { width: 100%; margin-top: 8px; }
 
 .aksi { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
 .aksi.spread { justify-content: space-between; }
@@ -224,3 +224,24 @@ tr.klik:hover td { background: var(--primary-soft); }
 .panah { color: var(--muted); font-size: 1.2rem; transition: transform .2s; }
 .mapel.terbuka .panah { transform: rotate(180deg); }
 .mapel .topik-grid { margin: 10px 0 14px; }
+
+/* Formulir tambah soal (admin) */
+textarea {
+  display: block; width: 100%; margin-top: 6px; padding: 11px 12px; font: inherit; color: inherit;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg); resize: vertical;
+}
+textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
+.kartu-soal { border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: 12px; padding: 10px 14px 12px; margin: 12px 0; }
+.kartu-soal .kepala-soal { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.kartu-soal .kepala-soal b { font-size: .95rem; }
+.kartu-soal label { margin: 8px 0; font-weight: 600; font-size: .92rem; }
+.pilihan-edit { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.pilihan-edit input[type=radio] { width: 20px; height: 20px; margin: 0; flex: none; }
+.pilihan-edit input[type=text] { margin: 0; }
+.pilihan-edit .huruf { font-weight: 700; width: 18px; }
+.cek-baris { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.cek-baris input { width: 18px; height: 18px; margin: 0; flex: none; }
+.btn.bahaya { color: var(--bad); }
+#form-soal input, #form-soal textarea, #form-soal select { font-weight: 400; }
+#form-soal h3 { margin: 18px 0 0; }
+.aksi-tabel { white-space: nowrap; text-align: right; }

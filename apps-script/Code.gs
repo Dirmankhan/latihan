@@ -211,6 +211,93 @@ function simpanPaket_(ss, data) {
   else sh.appendRow(isi);
 }
 
+// ---------- Soal buatan admin (sheet BankSoal & Materi) ----------
+
+function kodeKategori_(k) {
+  return /lomba|ksm|osn|olimpiade/i.test(String(k || '')) ? 'lomba' : 'pelajaran';
+}
+
+/** Baris milik satu topik: mapel, topik, kategori, dan kompetisi sama. */
+function barisTopik_(r, t, kolomKategori, kolomKompetisi) {
+  const kompetisi = String(r[kolomKompetisi] || '').trim();
+  const kategori = kompetisi ? 'lomba' : kodeKategori_(r[kolomKategori]);
+  return sama_(r[0], t.mapel) && sama_(r[1], t.topik) && sama_(kompetisi, t.kompetisi) &&
+    kategori === (t.kompetisi ? 'lomba' : kodeKategori_(t.kategori));
+}
+
+/** Hapus baris (dari bawah agar nomor baris tidak bergeser). */
+function hapusBarisTopik_(sh, t, kolomKategori, kolomKompetisi) {
+  if (sh.getLastRow() < 2) return 0;
+  const nilai = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+  let n = 0;
+  for (let i = nilai.length - 1; i >= 0; i--) {
+    if (barisTopik_(nilai[i], t, kolomKategori, kolomKompetisi)) { sh.deleteRow(i + 2); n++; }
+  }
+  return n;
+}
+
+/** Teks yang diawali "=" diberi tanda petik agar tidak dibaca sebagai rumus. */
+function teks_(x) {
+  const s = String(x == null ? '' : x).trim();
+  return /^=/.test(s) ? "'" + s : s;
+}
+
+function tulisBaris_(sh, baris) {
+  if (!baris.length) return;
+  // Format teks agar jawaban seperti 1/2 atau 0,5 tidak berubah menjadi tanggal/angka.
+  const rg = sh.getRange(sh.getLastRow() + 1, 1, baris.length, baris[0].length);
+  rg.setNumberFormat('@');
+  rg.setValues(baris);
+}
+
+function simpanSoal_(ss, d) {
+  const t = { mapel: String(d.mapel || '').trim(), topik: String(d.topik || '').trim(),
+    kompetisi: String(d.kompetisi || '').trim(), kategori: d.kompetisi ? 'lomba' : kodeKategori_(d.kategori) };
+  if (!t.mapel || !t.topik) throw new Error('Mapel dan topik wajib diisi');
+  const soal = (d.soal || []).filter(function (q) { return String(q.pertanyaan || '').trim(); });
+  soal.forEach(function (q, i) {
+    if (q.tipe === 'pg') {
+      const pilihan = (q.pilihan || []).filter(function (x) { return String(x).trim(); });
+      if (pilihan.length < 2) throw new Error('Soal ' + (i + 1) + ': minimal 2 pilihan jawaban');
+      if ('ABCD'.slice(0, pilihan.length).indexOf(String(q.jawaban)) === -1) throw new Error('Soal ' + (i + 1) + ': kunci jawaban belum dipilih');
+    } else if (!String(q.jawaban || '').trim()) {
+      throw new Error('Soal ' + (i + 1) + ': kunci jawaban isian kosong');
+    }
+  });
+  if (!soal.length && !String(d.materi || '').trim()) throw new Error('Belum ada soal atau materi');
+
+  const bank = siapkanSheet_(ss, SHEET_SOAL, HEADER_SOAL);
+  const materi = siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI);
+  if (d.ganti) {
+    hapusBarisTopik_(bank, t, 11, 12);
+    hapusBarisTopik_(materi, t, 4, 5);
+  }
+  tulisBaris_(bank, soal.map(function (q) {
+    const p = q.tipe === 'pg' ? (q.pilihan || []).filter(function (x) { return String(x).trim(); }) : [];
+    return [teks_(t.mapel), teks_(t.topik), teks_(d.kelas), q.tipe === 'pg' ? 'pg' : 'isian', teks_(q.pertanyaan),
+      teks_(p[0]), teks_(p[1]), teks_(p[2]), teks_(p[3]), teks_(q.jawaban), teks_(q.pembahasan),
+      t.kategori, teks_(t.kompetisi)];
+  }));
+  if (String(d.materi || '').trim()) {
+    if (!d.ganti) hapusBarisTopik_(materi, t, 4, 5);
+    tulisBaris_(materi, [[teks_(t.mapel), teks_(t.topik), teks_(d.kelas), teks_(d.materi), t.kategori, teks_(t.kompetisi)]]);
+  }
+  // Topik baru ikut dimasukkan ke semua paket yang sudah ada agar langsung terlihat siswa.
+  if (d.tambahKePaket) {
+    const sh = siapkanSheet_(ss, SHEET_PAKET, HEADER_PAKET);
+    if (sh.getLastRow() > 1) {
+      const rg = sh.getRange(2, 4, sh.getLastRow() - 1, 1);
+      rg.setValues(rg.getValues().map(function (r) {
+        let daftar = [];
+        try { daftar = JSON.parse(r[0] || '[]'); } catch (err) { daftar = []; }
+        if (daftar.indexOf(d.tambahKePaket) === -1) daftar.push(d.tambahKePaket);
+        return [JSON.stringify(daftar)];
+      }));
+    }
+  }
+  return soal.length;
+}
+
 // ---------- Permintaan dari aplikasi ----------
 
 /** Semua permintaan yang memerlukan login dikirim lewat POST (isi JSON). */
@@ -252,6 +339,20 @@ function doPost(e) {
         .slice(-100)
         .map(barisHasil_);
       return json_({ ok: true, riwayat: baris });
+    }
+
+    if (aksi === 'soal-simpan' || aksi === 'soal-hapus') {
+      if (!adminDariSesi_(data.sesi)) return json_({ ok: false, error: 'Sesi admin berakhir', keluar: true });
+      const lock = LockService.getScriptLock();
+      lock.waitLock(20000);
+      try {
+        if (aksi === 'soal-simpan') return json_({ ok: true, jumlah: simpanSoal_(ss, data) });
+        const t = { mapel: data.mapel, topik: data.topik, kompetisi: String(data.kompetisi || ''), kategori: data.kategori };
+        return json_({ ok: true, jumlah: hapusBarisTopik_(siapkanSheet_(ss, SHEET_SOAL, HEADER_SOAL), t, 11, 12) +
+          hapusBarisTopik_(siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI), t, 4, 5) });
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     if (aksi === 'rekap' || aksi === 'paket-simpan') {

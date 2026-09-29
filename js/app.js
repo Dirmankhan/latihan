@@ -29,7 +29,7 @@
 
   // Profil tanpa sesi (dari versi lama tanpa password) wajib masuk ulang.
   const profilTersimpan = simpan.get(KUNCI.profil, null);
-  const state = { profil: profilTersimpan && profilTersimpan.sesi ? profilTersimpan : null, admin: null, mapelTerbuka: new Set(), bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran'), kompetisi: simpan.get(KUNCI.kompetisi, '') };
+  const state = { profil: profilTersimpan && profilTersimpan.sesi ? profilTersimpan : null, admin: null, editSoal: null, mapelTerbuka: new Set(), bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran'), kompetisi: simpan.get(KUNCI.kompetisi, '') };
 
   // ---------- Utilitas ----------
   function esc(s) {
@@ -147,6 +147,10 @@
       const res = await fetch(url);
       const data = await res.json();
       if (data.ok) {
+        // Teks yang diawali "=" disimpan dengan tanda petik agar tidak dibaca sebagai rumus.
+        const bersih = (rows) => (rows || []).map((r) => r.map((x) => (typeof x === 'string' ? x.replace(/^'(?==)/, '') : x)));
+        data.soal = bersih(data.soal);
+        data.materi = bersih(data.materi);
         simpan.set(KUNCI.soalSheet, { soal: data.soal, materi: data.materi });
         state.bank = gabungBank(data);
       }
@@ -686,12 +690,13 @@
   }
 
   // ---------- Admin: rekap hasil ----------
-  function tabAdmin(paket) {
-    $('#tab-rekap').classList.toggle('aktif', !paket);
-    $('#tab-paket').classList.toggle('aktif', paket);
-    $('#panel-rekap').hidden = paket;
-    $('#panel-paket').hidden = !paket;
-    if (paket) renderPaket();
+  function tabAdmin(nama) {
+    ['rekap', 'paket', 'soal'].forEach((n) => {
+      $('#tab-' + n).classList.toggle('aktif', n === nama);
+      $('#panel-' + n).hidden = n !== nama;
+    });
+    if (nama === 'paket') renderPaket();
+    if (nama === 'soal') renderPanelSoal();
   }
 
   async function renderAdmin() {
@@ -786,6 +791,203 @@
       <td>${KATEGORI[kodeKategori(h.kategori)].ikon} ${esc(judulMapel(h.kompetisi, h.mapel))}</td><td>${esc(h.topik)}</td><td>${esc(h.benar)}/${esc(h.jumlahSoal)}</td>
       <td><span class="badge ${nilai(h) >= CFG.KKTP ? 'tuntas' : 'belum'}">${esc(h.nilai)}</span></td><td>${esc(h.durasiMenit)} mnt</td></tr>`).join('')
       : '<tr><td colspan="7" class="kosong">Belum ada latihan.</td></tr>';
+  }
+
+  // ---------- Admin: tambah / ubah soal ----------
+  const kunciTopikSheet = (kategori, kompetisi, mapel, topik) =>
+    [String(kompetisi || '').trim() ? 'lomba' : kodeKategori(kategori), normal(kompetisi), normal(mapel), normal(topik)].join('|');
+
+  // Topik yang soal/materinya berasal dari sheet BankSoal & Materi.
+  function topikSheet() {
+    const data = simpan.get(KUNCI.soalSheet, null) || { soal: [], materi: [] };
+    const grup = new Map();
+    const ambil = (r, kategori, kompetisi) => {
+      const k = kunciTopikSheet(kategori, kompetisi, r[0], r[1]);
+      if (!grup.has(k)) grup.set(k, { kategori: String(kompetisi || '').trim() ? 'lomba' : kodeKategori(kategori), kompetisi: String(kompetisi || '').trim(), mapel: String(r[0]), topik: String(r[1]), kelas: String(r[2] || ''), soal: [], materi: '' });
+      return grup.get(k);
+    };
+    (data.soal || []).forEach((r) => { if (r[0] && r[1] && r[4]) ambil(r, r[11], r[12]).soal.push(r); });
+    (data.materi || []).forEach((r) => { if (r[0] && r[1]) ambil(r, r[4], r[5]).materi = String(r[3] || ''); });
+    return [...grup.values()];
+  }
+
+  function nilaiFormTopik() {
+    const kategori = $('#s-kategori').value;
+    return { kategori, kompetisi: kategori === 'lomba' ? $('#s-kompetisi').value.trim() : '', mapel: $('#s-mapel').value.trim(), topik: $('#s-topik').value.trim() };
+  }
+
+  // Cari mapel/topik yang sudah ada di aplikasi (penulisan nama disamakan).
+  function topikAda(t) {
+    const m = state.bank.find((x) => x.kategori === (t.kompetisi ? 'lomba' : t.kategori) && normal(x.kompetisi) === normal(t.kompetisi) && normal(x.mapel) === normal(t.mapel));
+    return { mapel: m, topik: m && m.topik.find((x) => normal(x.nama) === normal(t.topik)) };
+  }
+
+  function isiDatalistSoal() {
+    const t = nilaiFormTopik();
+    $('#s-kompetisi-wadah').hidden = t.kategori !== 'lomba';
+    const opsi = (arr) => urutTeks(arr.filter(Boolean)).map((x) => `<option value="${esc(x)}"></option>`).join('');
+    $('#dl-kompetisi').innerHTML = opsi(state.bank.filter((m) => m.kategori === 'lomba').map((m) => m.kompetisi));
+    $('#dl-mapel').innerHTML = opsi(state.bank.filter((m) => m.kategori === t.kategori && (t.kategori !== 'lomba' || !t.kompetisi || normal(m.kompetisi) === normal(t.kompetisi))).map((m) => m.mapel));
+    const ada = topikAda(t);
+    $('#dl-topik').innerHTML = opsi(ada.mapel ? ada.mapel.topik.map((x) => x.nama) : []);
+    const info = $('#s-info-topik');
+    if (state.editSoal) info.textContent = '✏️ Mengubah topik ini: semua soal & materinya di sheet akan diganti dengan isi formulir.';
+    else if (!t.mapel || !t.topik) info.textContent = '';
+    else if (ada.topik) {
+      info.textContent = `ℹ️ Topik ini sudah ada (${ada.topik.soal.length} soal). Soal baru akan ditambahkan ke topik tersebut.`;
+      if (!$('#s-kelas').value && ada.topik.kelas) $('#s-kelas').value = ada.topik.kelas;
+    } else info.textContent = ada.mapel ? '🆕 Topik baru di mata pelajaran ini.' : '🆕 Mata pelajaran dan topik baru.';
+    $('#s-ke-paket').parentElement.hidden = !!state.editSoal || !!ada.topik;
+  }
+
+  function nomoriSoal() {
+    document.querySelectorAll('#s-daftar-soal .kartu-soal').forEach((k, i) => (k.querySelector('.no-soal').textContent = `Soal ${i + 1} · ${k.dataset.tipe === 'pg' ? 'Pilihan ganda' : 'Isian'}`));
+  }
+
+  function tambahKartuSoal(tipe, isi = {}) {
+    const k = el('div', { class: 'kartu-soal' });
+    k.dataset.tipe = tipe;
+    const nama = 'kunci-' + Math.random().toString(36).slice(2);
+    k.innerHTML = `<div class="kepala-soal"><b class="no-soal"></b><button type="button" class="btn sm bahaya hapus-soal">Hapus</button></div>
+      <label>Pertanyaan <textarea class="q" rows="2" placeholder="Untuk teks bacaan: tulis bacaan, baris kosong, lalu pertanyaannya."></textarea></label>
+      ${tipe === 'pg'
+        ? `<div class="small muted">Isi pilihan jawaban, lalu klik bulatan pada jawaban yang benar.</div>` +
+          ['A', 'B', 'C', 'D'].map((h) => `<div class="pilihan-edit"><input type="radio" name="${nama}" value="${h}" aria-label="Kunci ${h}"><span class="huruf">${h}</span><input type="text" class="p" data-h="${h}" placeholder="Pilihan ${h}${h > 'B' ? ' (boleh kosong)' : ''}"></div>`).join('')
+        : `<label>Kunci jawaban <input type="text" class="kunci-isian" placeholder="Jika ada beberapa jawaban benar, pisahkan dengan | (mis. 63|enam puluh tiga)"></label>`}
+      <label>Pembahasan (opsional) <textarea class="bahas" rows="2"></textarea></label>`;
+    k.querySelector('.q').value = isi.pertanyaan || '';
+    k.querySelector('.bahas').value = isi.pembahasan || '';
+    if (tipe === 'pg') {
+      (isi.pilihan || []).forEach((p, i) => { const inp = k.querySelectorAll('.p')[i]; if (inp) inp.value = p; });
+      const r = k.querySelector(`input[type=radio][value="${String(isi.jawaban || '').toUpperCase()}"]`);
+      if (r) r.checked = true;
+    } else k.querySelector('.kunci-isian').value = isi.jawaban || '';
+    k.querySelector('.hapus-soal').onclick = () => { k.remove(); nomoriSoal(); };
+    $('#s-daftar-soal').appendChild(k);
+    nomoriSoal();
+    return k;
+  }
+
+  // Baca & periksa formulir. Pilihan kosong dirapatkan dan huruf kuncinya disesuaikan.
+  function kumpulkanSoal() {
+    return [...document.querySelectorAll('#s-daftar-soal .kartu-soal')].map((k, i) => {
+      const pertanyaan = k.querySelector('.q').value.trim();
+      const pembahasan = k.querySelector('.bahas').value.trim();
+      if (!pertanyaan) throw new Error(`Soal ${i + 1}: pertanyaan masih kosong.`);
+      if (k.dataset.tipe === 'isian') {
+        const jawaban = k.querySelector('.kunci-isian').value.trim();
+        if (!jawaban) throw new Error(`Soal ${i + 1}: kunci jawaban masih kosong.`);
+        return { tipe: 'isian', pertanyaan, jawaban, pembahasan };
+      }
+      const terisi = [...k.querySelectorAll('.p')].map((inp) => ({ h: inp.dataset.h, v: inp.value.trim() })).filter((x) => x.v);
+      if (terisi.length < 2) throw new Error(`Soal ${i + 1}: isi minimal 2 pilihan jawaban.`);
+      if (new Set(terisi.map((x) => normal(x.v))).size !== terisi.length) throw new Error(`Soal ${i + 1}: ada pilihan jawaban yang sama.`);
+      const kunci = k.querySelector('input[type=radio]:checked');
+      const idx = kunci ? terisi.findIndex((x) => x.h === kunci.value) : -1;
+      if (idx === -1) throw new Error(`Soal ${i + 1}: pilih kunci jawaban (klik bulatan di samping pilihan yang benar, dan pilihan itu tidak boleh kosong).`);
+      return { tipe: 'pg', pertanyaan, pilihan: terisi.map((x) => x.v), jawaban: HURUF[idx], pembahasan };
+    });
+  }
+
+  function kosongkanFormSoal() {
+    state.editSoal = null;
+    $('#form-soal').reset();
+    ['#s-kategori', '#s-kompetisi', '#s-mapel', '#s-topik'].forEach((s) => ($(s).disabled = false));
+    $('#s-daftar-soal').innerHTML = '';
+    $('#soal-judul-form').textContent = 'Tambah Soal';
+    tambahKartuSoal('pg');
+    isiDatalistSoal();
+  }
+
+  function renderPanelSoal() {
+    if (!$('#s-daftar-soal').children.length && !state.editSoal) tambahKartuSoal('pg');
+    isiDatalistSoal();
+    const daftar = topikSheet().sort((a, b) => (a.mapel + a.topik).localeCompare(b.mapel + b.topik, 'id'));
+    const tb = $('#s-topik-sheet');
+    tb.innerHTML = daftar.length ? '' : '<tr><td colspan="4" class="kosong">Belum ada soal buatan admin.</td></tr>';
+    daftar.forEach((t) => {
+      const tr = el('tr', {}, `<td>${KATEGORI[t.kategori].ikon} ${esc(judulMapel(t.kompetisi, t.mapel))}</td><td>${esc(t.topik)}</td><td>${t.soal.length}${t.materi ? ' + materi' : ''}</td>
+        <td class="aksi-tabel"><button class="btn sm" type="button">✏️ Ubah</button> <button class="btn sm bahaya" type="button">Hapus</button></td>`);
+      const [ubah, hapus] = tr.querySelectorAll('button');
+      ubah.onclick = () => ubahTopikSheet(t);
+      hapus.onclick = () => hapusTopikSheet(t);
+      tb.appendChild(tr);
+    });
+  }
+
+  function ubahTopikSheet(t) {
+    state.editSoal = t;
+    $('#soal-judul-form').textContent = `Ubah Soal: ${t.topik}`;
+    $('#s-kategori').value = t.kategori;
+    $('#s-kompetisi').value = t.kompetisi;
+    $('#s-mapel').value = t.mapel;
+    $('#s-topik').value = t.topik;
+    $('#s-kelas').value = t.kelas;
+    $('#s-materi').value = t.materi;
+    // Nama topik dikunci saat mengubah agar baris lama di sheet yang diganti.
+    ['#s-kategori', '#s-kompetisi', '#s-mapel', '#s-topik'].forEach((s) => ($(s).disabled = true));
+    $('#s-daftar-soal').innerHTML = '';
+    t.soal.forEach((r) => {
+      const [, , , tipe, pertanyaan, a, b, c, d, jawaban, pembahasan] = r;
+      if (normal(tipe) === 'isian') tambahKartuSoal('isian', { pertanyaan, jawaban: String(jawaban ?? ''), pembahasan });
+      else tambahKartuSoal('pg', { pertanyaan, pilihan: [a, b, c, d].map((x) => String(x ?? '')), jawaban, pembahasan });
+    });
+    if (!t.soal.length) tambahKartuSoal('pg');
+    $('#s-pesan').textContent = '';
+    isiDatalistSoal();
+    $('#form-soal').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function hapusTopikSheet(t) {
+    if (!confirm(`Hapus semua soal buatan admin di topik "${t.topik}" (${t.soal.length} soal)? Tindakan ini tidak bisa dibatalkan.`)) return;
+    try {
+      await api('soal-hapus', { sesi: state.profil.sesi, kategori: t.kategori, kompetisi: t.kompetisi, mapel: t.mapel, topik: t.topik });
+      await muatBank();
+      if (state.editSoal && kunciTopikSheet(t.kategori, t.kompetisi, t.mapel, t.topik) === kunciTopikSheet(state.editSoal.kategori, state.editSoal.kompetisi, state.editSoal.mapel, state.editSoal.topik)) kosongkanFormSoal();
+      renderPanelSoal();
+      $('#s-pesan').textContent = `✅ Topik "${t.topik}" dihapus dari sheet.`;
+    } catch (e) {
+      if (e instanceof GalatSesi) { sesiBerakhir(); return; }
+      alert('Gagal menghapus: ' + (e instanceof TypeError ? 'periksa koneksi internet.' : e.message));
+    }
+  }
+
+  async function simpanSoalAdmin(e) {
+    e.preventDefault();
+    const pesan = $('#s-pesan');
+    const t = nilaiFormTopik();
+    let soal;
+    try {
+      if (!t.mapel || !t.topik) throw new Error('Isi mata pelajaran dan topik.');
+      if (t.kategori === 'lomba' && !t.kompetisi) throw new Error('Isi nama kompetisi untuk soal lomba.');
+      soal = kumpulkanSoal();
+      if (!soal.length && !$('#s-materi').value.trim()) throw new Error('Tambahkan minimal satu soal atau materi.');
+    } catch (err) { pesan.textContent = '⚠️ ' + err.message; return; }
+
+    const ada = topikAda(t);
+    const nama = { mapel: ada.mapel ? ada.mapel.mapel : t.mapel, topik: ada.topik ? ada.topik.nama : t.topik, kompetisi: ada.mapel ? ada.mapel.kompetisi : t.kompetisi };
+    const topikBaru = !ada.topik && !state.editSoal;
+    const tombol = $('#s-simpan');
+    tombol.disabled = true;
+    pesan.textContent = 'Menyimpan ke Google Sheet…';
+    try {
+      const d = await api('soal-simpan', {
+        sesi: state.profil.sesi, kategori: t.kategori, kompetisi: nama.kompetisi, mapel: nama.mapel, topik: nama.topik,
+        kelas: $('#s-kelas').value.trim(), materi: $('#s-materi').value.trim(), soal, ganti: !!state.editSoal,
+        tambahKePaket: topikBaru && $('#s-ke-paket').checked ? idTopik(t.kategori, nama.kompetisi, nama.mapel, nama.topik) : '',
+      });
+      const diubah = !!state.editSoal;
+      await muatBank();
+      if (topikBaru) { try { terimaDataAdmin(await api('rekap', { sesi: state.profil.sesi })); } catch (err) { /* paket dimuat ulang nanti */ } }
+      kosongkanFormSoal();
+      renderPanelSoal();
+      pesan.textContent = `✅ ${d.jumlah} soal ${diubah ? 'diperbarui' : 'tersimpan'} di topik "${nama.topik}".`;
+    } catch (err) {
+      if (err instanceof GalatSesi) { sesiBerakhir(); return; }
+      pesan.textContent = '⚠️ Gagal menyimpan: ' + (err instanceof TypeError ? 'periksa koneksi internet.' : err.message);
+    } finally {
+      tombol.disabled = false;
+    }
   }
 
   // ---------- Admin: paket soal ----------
@@ -916,8 +1118,14 @@
       if (!confirm('Keluar dari akun ini?')) return;
       keluar();
     };
-    $('#tab-rekap').onclick = () => tabAdmin(false);
-    $('#tab-paket').onclick = () => tabAdmin(true);
+    $('#tab-rekap').onclick = () => tabAdmin('rekap');
+    $('#tab-paket').onclick = () => tabAdmin('paket');
+    $('#tab-soal').onclick = () => tabAdmin('soal');
+    ['#s-kategori', '#s-kompetisi', '#s-mapel', '#s-topik'].forEach((s) => ($(s).oninput = isiDatalistSoal));
+    $('#s-tambah-pg').onclick = () => tambahKartuSoal('pg').querySelector('.q').focus();
+    $('#s-tambah-isian').onclick = () => tambahKartuSoal('isian').querySelector('.q').focus();
+    $('#s-batal').onclick = () => { if (confirm('Kosongkan formulir?')) { kosongkanFormSoal(); $('#s-pesan').textContent = ''; } };
+    $('#form-soal').onsubmit = simpanSoalAdmin;
     $('#f-sekolah').onchange = () => { isiFilterSiswa(); renderRekap(); };
     $('#f-siswa').onchange = renderRekap;
     $('#f-kategori').onchange = renderRekap;

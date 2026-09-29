@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Belajar Mandiri</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
-  <link rel="stylesheet" href="css/style.css?v=20260929c">
+  <link rel="stylesheet" href="css/style.css?v=20260929e">
 </head>
 <body>
   <header class="topbar">
@@ -132,6 +132,7 @@
       <div class="tabs" role="tablist">
         <button class="tab aktif" id="tab-rekap" type="button" role="tab">📊 Rekap Hasil</button>
         <button class="tab" id="tab-paket" type="button" role="tab">📦 Paket Soal</button>
+        <button class="tab" id="tab-soal" type="button" role="tab">➕ Tambah Soal</button>
       </div>
 
       <div id="panel-rekap">
@@ -176,6 +177,61 @@
         </div>
       </div>
 
+      <div id="panel-soal" hidden>
+        <form class="card" id="form-soal" novalidate>
+          <h2 id="soal-judul-form">Tambah Soal</h2>
+          <p class="muted small">Buat topik baru, atau tulis nama topik yang sudah ada untuk menambah soalnya.
+            Soal tersimpan di sheet <b>BankSoal</b>.</p>
+          <div class="filter-baris">
+            <label>Kategori
+              <select id="s-kategori">
+                <option value="pelajaran">📘 Materi Pelajaran</option>
+                <option value="lomba">🏆 Persiapan Lomba</option>
+              </select>
+            </label>
+            <label id="s-kompetisi-wadah" hidden>Kompetisi
+              <input id="s-kompetisi" list="dl-kompetisi" placeholder="mis. KMSI 2026" autocomplete="off">
+            </label>
+            <label>Mata Pelajaran
+              <input id="s-mapel" list="dl-mapel" required placeholder="mis. Matematika" autocomplete="off">
+            </label>
+            <label>Topik
+              <input id="s-topik" list="dl-topik" required placeholder="mis. Pecahan" autocomplete="off">
+            </label>
+            <label>Kelas
+              <input id="s-kelas" placeholder="mis. 7" autocomplete="off">
+            </label>
+          </div>
+          <datalist id="dl-kompetisi"></datalist><datalist id="dl-mapel"></datalist><datalist id="dl-topik"></datalist>
+          <p class="small" id="s-info-topik"></p>
+          <label>Materi ringkas (opsional)
+            <textarea id="s-materi" rows="4" placeholder="Baris kosong = paragraf baru. Awali baris dengan - untuk daftar, **teks** untuk tebal."></textarea>
+          </label>
+          <h3>Soal</h3>
+          <div id="s-daftar-soal"></div>
+          <div class="aksi">
+            <button class="btn sm" id="s-tambah-pg" type="button">+ Soal pilihan ganda</button>
+            <button class="btn sm" id="s-tambah-isian" type="button">+ Soal isian</button>
+          </div>
+          <label class="cek-baris"><input type="checkbox" id="s-ke-paket" checked> Masukkan topik ini ke semua paket soal yang sudah ada</label>
+          <div class="aksi spread">
+            <button class="btn" id="s-batal" type="button">Kosongkan formulir</button>
+            <button class="btn primary" id="s-simpan" type="submit">💾 Simpan Soal</button>
+          </div>
+          <p class="small" id="s-pesan" role="status"></p>
+        </form>
+        <div class="card">
+          <h2>Soal Buatan Admin</h2>
+          <p class="muted small">Topik yang soalnya berasal dari sheet BankSoal. Soal bawaan aplikasi (dari buku) tidak bisa diubah di sini.</p>
+          <div class="tabel-wrap">
+            <table>
+              <thead><tr><th>Mapel</th><th>Topik</th><th>Soal</th><th></th></tr></thead>
+              <tbody id="s-topik-sheet"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div id="panel-paket" hidden>
         <div class="card">
           <p class="muted small">Pilih topik yang boleh dikerjakan. Paket untuk siswa tertentu diutamakan,
@@ -197,15 +253,15 @@
     </section>
   </main>
 
-  <script src="js/config.js?v=20260929c"></script>
-  <script src="js/bank-soal.js?v=20260929c"></script>
-  <script src="js/soal-buku/_util.js?v=20260929c"></script>
-  <script src="js/soal-buku/matematika.js?v=20260929c"></script>
-  <script src="js/soal-buku/ipa.js?v=20260929c"></script>
-  <script src="js/soal-buku/ips.js?v=20260929c"></script>
-  <script src="js/soal-buku/pai.js?v=20260929c"></script>
-  <script src="js/soal-buku/kka.js?v=20260929c"></script>
-  <script src="js/soal-kmsi-level4.js?v=20260929c"></script>
-  <script src="js/app.js?v=20260929c"></script>
+  <script src="js/config.js?v=20260929e"></script>
+  <script src="js/bank-soal.js?v=20260929e"></script>
+  <script src="js/soal-buku/_util.js?v=20260929e"></script>
+  <script src="js/soal-buku/matematika.js?v=20260929e"></script>
+  <script src="js/soal-buku/ipa.js?v=20260929e"></script>
+  <script src="js/soal-buku/ips.js?v=20260929e"></script>
+  <script src="js/soal-buku/pai.js?v=20260929e"></script>
+  <script src="js/soal-buku/kka.js?v=20260929e"></script>
+  <script src="js/soal-kmsi-level4.js?v=20260929e"></script>
+  <script src="js/app.js?v=20260929e"></script>
 </body>
 </html>
