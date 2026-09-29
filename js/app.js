@@ -595,7 +595,7 @@
   function tulisDaftarSiswa() {
     const daftar = simpan.get(KUNCI.daftarSiswa, []);
     const lama = $('#in-nama').value;
-    isiPilihan($('#in-nama'), urutTeks(daftar.map((s) => s.nama)), daftar.length ? '— pilih nama —' : '— belum ada siswa di sheet "Siswa" —', lama);
+    isiPilihan($('#in-nama'), urutTeks(daftar.map((s) => s.nama)), daftar.length ? '— pilih nama —' : '— daftar siswa belum tersedia —', lama);
     perbaruiPilihanSekolah();
   }
 
@@ -608,9 +608,21 @@
     try {
       const url = CFG.APPS_SCRIPT_URL + '?action=daftar&token=' + encodeURIComponent(CFG.TOKEN);
       const data = await (await fetch(url)).json();
-      if (data.ok) { simpan.set(KUNCI.daftarSiswa, data.siswa); tulisDaftarSiswa(); }
+      if (!data.ok) {
+        throw new Error(data.error === 'Token salah'
+          ? 'TOKEN di Apps Script (Code.gs) tidak sama dengan TOKEN di js/config.js.'
+          : data.error || 'Daftar siswa gagal dimuat.');
+      }
+      // Backend lama tidak mengenal action=daftar dan tidak mengirim daftar siswa.
+      if (!Array.isArray(data.siswa)) {
+        throw new Error('Apps Script yang aktif masih versi lama. Buka Apps Script → Terapkan (Deploy) → Kelola deployment → ✏️ Edit → Versi: "Versi baru" → Terapkan.');
+      }
+      simpan.set(KUNCI.daftarSiswa, data.siswa);
+      tulisDaftarSiswa();
+      $('#galat-masuk').textContent = data.siswa.length ? '' : 'Sheet "Siswa" belum berisi siswa aktif.';
     } catch (e) {
-      if (!simpan.get(KUNCI.daftarSiswa, []).length) $('#galat-masuk').textContent = 'Daftar siswa gagal dimuat. Periksa koneksi internet.';
+      $('#galat-masuk').textContent = e instanceof TypeError || e instanceof SyntaxError
+        ? 'Daftar siswa gagal dimuat. Periksa koneksi internet.' : e.message;
     }
   }
 
