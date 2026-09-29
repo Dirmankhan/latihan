@@ -29,7 +29,7 @@
 
   // Profil tanpa sesi (dari versi lama tanpa password) wajib masuk ulang.
   const profilTersimpan = simpan.get(KUNCI.profil, null);
-  const state = { profil: profilTersimpan && profilTersimpan.sesi ? profilTersimpan : null, admin: null, bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran'), kompetisi: simpan.get(KUNCI.kompetisi, '') };
+  const state = { profil: profilTersimpan && profilTersimpan.sesi ? profilTersimpan : null, admin: null, mapelTerbuka: new Set(), bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran'), kompetisi: simpan.get(KUNCI.kompetisi, '') };
 
   // ---------- Utilitas ----------
   function esc(s) {
@@ -355,9 +355,25 @@
         wadah.appendChild(el('div', { class: 'kompetisi-kepala' },
           `<h2>🏆 ${esc(m.kompetisi || 'Lomba lainnya')}</h2>${info.nama ? `<p><b>${esc(info.nama)}</b></p>` : ''}${info.keterangan ? `<p class="muted small">${esc(info.keterangan)}</p>` : ''}`));
       }
-      const sec = el('div', { class: 'mapel' });
-      sec.appendChild(el('h2', {}, `${esc(m.ikon || '📘')} ${esc(m.mapel)}`));
+      // Topik (paket soal) disembunyikan sampai mata pelajarannya diklik.
+      const idMapel = [m.kategori, m.kompetisi, m.mapel].join('::');
+      const terbuka = state.mapelTerbuka.has(idMapel);
+      const tuntasMapel = m.topik.filter((t) => (st.terbaik[idTopik(m.kategori, m.kompetisi, m.mapel, t.nama)] ?? -1) >= CFG.KKTP).length;
+      const sec = el('div', { class: 'mapel' + (terbuka ? ' terbuka' : '') });
+      const kepala = el('button', { type: 'button', class: 'mapel-kepala', 'aria-expanded': String(terbuka) },
+        `<span class="mapel-ikon">${esc(m.ikon || '📘')}</span>
+         <span class="mapel-judul"><b>${esc(m.mapel)}</b><small>${m.topik.length} topik · ${tuntasMapel} tuntas</small></span>
+         <span class="panah" aria-hidden="true">▾</span>`);
+      sec.appendChild(kepala);
       const grid = el('div', { class: 'topik-grid' });
+      grid.hidden = !terbuka;
+      kepala.onclick = () => {
+        const buka = grid.hidden;
+        grid.hidden = !buka;
+        sec.classList.toggle('terbuka', buka);
+        kepala.setAttribute('aria-expanded', String(buka));
+        if (buka) state.mapelTerbuka.add(idMapel); else state.mapelTerbuka.delete(idMapel);
+      };
       const urut = m.topik.slice().sort((a, b) => (String(a.kelas) === p.kelas ? -1 : 0) - (String(b.kelas) === p.kelas ? -1 : 0));
       urut.forEach((t) => {
         const id = idTopik(m.kategori, m.kompetisi, m.mapel, t.nama);

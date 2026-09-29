@@ -208,3 +208,19 @@ tr.klik:hover td { background: var(--primary-soft); }
 .paket-daftar input[type=checkbox] { width: 18px; height: 18px; margin: 0; flex: none; }
 .paket-daftar .grup-kategori { margin: 18px 0 4px; font-size: 1.05rem; }
 .paket-daftar .jumlah-pilih { color: var(--muted); font-weight: 400; font-size: .85rem; }
+
+/* Mata pelajaran yang bisa dibuka-tutup */
+.mapel { margin-bottom: 10px; }
+.mapel-kepala {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px;
+}
+.mapel-kepala:hover { border-color: var(--primary); }
+.mapel.terbuka .mapel-kepala { border-color: var(--primary); background: var(--primary-soft); }
+.mapel-ikon { font-size: 1.6rem; line-height: 1; }
+.mapel-judul { flex: 1; display: flex; flex-direction: column; }
+.mapel-judul b { font-size: 1.1rem; }
+.mapel-judul small { color: var(--muted); font-size: .85rem; }
+.panah { color: var(--muted); font-size: 1.2rem; transition: transform .2s; }
+.mapel.terbuka .panah { transform: rotate(180deg); }
+.mapel .topik-grid { margin: 10px 0 14px; }
