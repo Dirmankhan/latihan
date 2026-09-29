@@ -4,6 +4,28 @@ Aplikasi web sederhana untuk **membaca materi** dan **latihan soal**. Setiap has
 latihan otomatis tercatat di **Google Sheet**, sehingga orang tua bisa memantau
 perkembangan belajar dari HP atau laptop.
 
+## Login Siswa & Admin
+
+- **Siswa** masuk dengan memilih **Nama Siswa** (dropdown), **Nama Sekolah** (dropdown), lalu
+  mengisi **password**. Daftar sekolah otomatis menyesuaikan nama yang dipilih. Setelah masuk,
+  siswa tetap login di perangkat itu sampai menekan **Keluar**.
+- **Admin** (orang tua/guru) masuk di tab **Admin** dengan password admin, lalu bisa:
+  - **📊 Rekap Hasil**: ringkasan per siswa (jumlah latihan, rata-rata, topik tuntas, terakhir latihan),
+    per topik (diurutkan dari rata-rata terendah), dan 100 latihan terbaru. Bisa disaring per
+    sekolah, siswa, dan kategori. Klik baris siswa untuk melihat hasil siswa itu saja.
+  - **📦 Paket Soal**: mencentang topik yang boleh dikerjakan, untuk **semua siswa**, **satu sekolah**,
+    atau **satu siswa**. Urutan yang berlaku: paket siswa → paket sekolah → paket semua siswa →
+    tanpa paket (semua topik terbuka). Tombol *Hapus paket* mengembalikan ke tingkat di atasnya.
+
+Data siswa diisi di sheet **Siswa**:
+
+| Nama | Sekolah | Kelas | Password | Aktif (Ya/Tidak) |
+|---|---|---|---|---|
+| Adam | MTs Contoh | 7 | 1234 | Ya |
+
+Isi `Tidak` pada kolom Aktif untuk menonaktifkan siswa. Siswa itu akan otomatis keluar dan
+tidak bisa masuk lagi. Paket yang dibuat admin tersimpan di sheet **Paket**; tidak perlu diubah manual.
+
 ## Dua Kategori Materi
 
 Beranda memiliki dua tab:
@@ -98,10 +120,12 @@ Jumlah soal per sesi suatu topik dapat diatur dengan `soalPerSesi`.
 1. Buka [sheets.new](https://sheets.new), beri nama misalnya **"Hasil Belajar Anak"**.
 2. Menu **Ekstensi → Apps Script**. Hapus isi bawaan, tempel seluruh isi
    [`apps-script/Code.gs`](apps-script/Code.gs).
-3. Ubah baris `const TOKEN = '...'` menjadi kode rahasia Anda sendiri, lalu simpan (💾).
+3. Ubah baris `const TOKEN = '...'` menjadi kode rahasia Anda sendiri, dan
+   `const ADMIN_PASSWORD = '...'` menjadi password admin Anda, lalu simpan (💾).
 4. Pilih fungsi **`setup`** di toolbar → klik **Jalankan** → izinkan akses
    (klik *Advanced/Lanjutan → Buka proyek* jika muncul peringatan).
-   Sheet Hasil, Rincian, BankSoal, Materi, dan Ringkasan akan dibuat otomatis.
+   Sheet Hasil, Rincian, BankSoal, Materi, Siswa, Paket, dan Ringkasan akan dibuat otomatis.
+   Lalu isi sheet **Siswa** (ganti baris contoh dengan data siswa sebenarnya).
 5. Klik **Terapkan (Deploy) → Deployment baru** → jenis **Aplikasi web**:
    - Jalankan sebagai: **Saya**
    - Yang memiliki akses: **Siapa saja**
@@ -125,6 +149,11 @@ agar terasa seperti aplikasi.
 
 > ⚠️ Jika `Code.gs` diubah, lakukan **Deploy → Kelola deployment → Edit → Versi baru**
 > agar perubahan berlaku (URL tetap sama).
+
+> 🔄 **Memperbarui dari versi tanpa login:** tempel `Code.gs` terbaru, isi `TOKEN` dan
+> `ADMIN_PASSWORD`, jalankan **`setup`** sekali lagi (data lama tidak terhapus; kolom
+> **Sekolah** ditambahkan di sheet Hasil dan Rincian), isi sheet **Siswa**, lalu deploy **Versi baru**.
+> Semua pengguna perlu masuk ulang. Hasil latihan yang belum terkirim tetap dikirim setelah siswa masuk.
 
 ## Menambah Soal
 
@@ -168,5 +197,12 @@ apps-script/Code.gs   Backend Google Sheet
 ```
 
 ## Catatan Keamanan
-Token hanya pengaman ringan agar orang lain tidak asal mengirim data. Karena token
-ada di `config.js` yang bisa dilihat publik, jangan simpan data sensitif di sheet ini.
+- Password siswa dan admin diperiksa di Apps Script (server), tidak pernah dikirim ke browser.
+  Setelah login, aplikasi menerima **sesi bertanda tangan** (berlaku 365 hari untuk siswa,
+  7 hari untuk admin). Hasil latihan hanya diterima dari siswa yang login dan masih aktif.
+- Salah password 5 kali → nama itu (atau login admin) dikunci 10 menit.
+- **Nama siswa dan nama sekolah** bisa dilihat siapa pun yang membuka aplikasi (untuk dropdown
+  login). Password dan nilai tidak.
+- Password siswa tersimpan apa adanya di sheet Siswa agar mudah diatur orang tua/guru. Jangan
+  bagikan akses Google Sheet ke siswa, dan jangan memakai password yang sama dengan akun lain.
+- Token di `config.js` hanya pengaman ringan karena bisa dilihat publik.

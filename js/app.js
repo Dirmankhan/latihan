@@ -3,7 +3,7 @@
 
   const CFG = window.LMS_CONFIG || {};
   const HURUF = ['A', 'B', 'C', 'D', 'E'];
-  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab', kompetisi: 'lms_kompetisi' };
+  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab', kompetisi: 'lms_kompetisi', daftarSiswa: 'lms_daftar_siswa' };
   const KATEGORI = {
     pelajaran: { label: 'Materi Pelajaran', ikon: '📘', ajakan: 'Pelajari materi sekolah dan latih pemahamanmu.' },
     lomba: { label: 'Persiapan Lomba', ikon: '🏆', ajakan: 'Latihan soal per kompetisi (KMSI, KSM, dan lainnya). Semangat, calon juara!' },
@@ -27,7 +27,9 @@
     },
   };
 
-  const state = { profil: simpan.get(KUNCI.profil, null), bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran'), kompetisi: simpan.get(KUNCI.kompetisi, '') };
+  // Profil tanpa sesi (dari versi lama tanpa password) wajib masuk ulang.
+  const profilTersimpan = simpan.get(KUNCI.profil, null);
+  const state = { profil: profilTersimpan && profilTersimpan.sesi ? profilTersimpan : null, admin: null, bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran'), kompetisi: simpan.get(KUNCI.kompetisi, '') };
 
   // ---------- Utilitas ----------
   function esc(s) {
@@ -156,17 +158,47 @@
     return null;
   }
 
+  const peran = () => (state.profil ? state.profil.peran : null);
+
+  // Topik yang boleh dikerjakan siswa sesuai paket dari admin (null = semua topik).
+  function bankTampil() {
+    const paket = state.profil && state.profil.peran === 'siswa' ? state.profil.paket : null;
+    if (!Array.isArray(paket)) return state.bank;
+    const boleh = new Set(paket);
+    return state.bank
+      .map((m) => Object.assign({}, m, { topik: m.topik.filter((t) => boleh.has(idTopik(m.kategori, m.kompetisi, m.mapel, t.nama))) }))
+      .filter((m) => m.topik.length);
+  }
+
+  // ---------- Permintaan ke Apps Script ----------
+  class GalatSesi extends Error {}
+  // Tanpa header Content-Type → text/plain, sehingga tidak butuh preflight CORS.
+  async function api(action, data) {
+    if (!CFG.APPS_SCRIPT_URL) throw new Error('Aplikasi belum terhubung ke Google Sheet (APPS_SCRIPT_URL di js/config.js).');
+    const res = await fetch(CFG.APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(Object.assign({ token: CFG.TOKEN, action }, data)) });
+    const hasil = await res.json();
+    if (!hasil.ok) throw hasil.keluar ? new GalatSesi(hasil.error) : new Error(hasil.error || 'Gagal');
+    return hasil;
+  }
+
+  function sesiBerakhir() {
+    alert('Sesi login sudah berakhir. Silakan masuk lagi.');
+    keluar();
+  }
+
   // ---------- Pengiriman ke Google Sheet (dengan antrian offline) ----------
   async function kirimSatu(payload) {
-    const body = JSON.stringify(Object.assign({ token: CFG.TOKEN }, payload));
+    // Hasil lama di antrian yang belum membawa sesi memakai sesi siswa yang sedang masuk.
+    if (!payload.sesi && peran() === 'siswa' && payload.nama === state.profil.nama) payload = Object.assign({}, payload, { sesi: state.profil.sesi });
+    const body = JSON.stringify(Object.assign({ token: CFG.TOKEN, action: 'hasil' }, payload));
     try {
       // Tanpa header Content-Type → text/plain, sehingga tidak butuh preflight CORS.
       const res = await fetch(CFG.APPS_SCRIPT_URL, { method: 'POST', body });
       const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'Gagal');
+      if (!data.ok) throw data.keluar ? new GalatSesi(data.error) : new Error(data.error || 'Gagal');
       return true;
     } catch (e) {
-      if (e instanceof TypeError) {
+      if (e instanceof TypeError && payload.sesi) {
         // Beberapa browser memblokir pembacaan respons; kirim tanpa membaca balasan.
         await fetch(CFG.APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body });
         return true;
@@ -185,7 +217,14 @@
         antrian = antrian.filter((x) => x.idSesi !== item.idSesi);
         simpan.set(KUNCI.antrian, antrian);
         terkirim++;
-      } catch (e) { break; }
+      } catch (e) {
+        if (e instanceof GalatSesi) {
+          const milikSaya = peran() === 'siswa' && item.nama === state.profil.nama;
+          if (milikSaya) { tampilStatusSync(); sesiBerakhir(); return { terkirim, sisa: antrian.length }; }
+          continue; // milik akun lain: dikirim saat akun itu masuk lagi
+        }
+        break;
+      }
     }
     tampilStatusSync();
     return { terkirim, sisa: antrian.length };
@@ -204,10 +243,14 @@
   function tampil(nama) {
     document.querySelectorAll('.view').forEach((v) => (v.hidden = v.id !== 'v-' + nama));
     $('#nav').hidden = !state.profil;
+    document.querySelectorAll('#nav [data-peran]').forEach((b) => (b.hidden = b.dataset.peran !== peran()));
+    $('#nama-pengguna').textContent = !state.profil ? '' : peran() === 'admin' ? '🛡️ Admin' : `🎒 ${state.profil.nama} · ${state.profil.sekolah}`;
     if (nama !== 'kuis') hentikanTimer();
     window.scrollTo(0, 0);
     if (nama === 'beranda') renderBeranda();
     if (nama === 'riwayat') renderRiwayat();
+    if (nama === 'admin') renderAdmin();
+    if (nama === 'masuk') siapkanMasuk();
   }
 
   function pergi(nama) {
@@ -215,12 +258,17 @@
       if (!confirm('Latihan belum selesai. Keluar dan batalkan latihan ini?')) return;
       state.sesi = null;
     }
-    tampil(state.profil ? nama : 'masuk');
+    if (!state.profil) nama = 'masuk';
+    else if (peran() === 'admin' && nama !== 'admin') nama = 'admin';
+    else if (peran() === 'siswa' && nama === 'admin') nama = 'beranda';
+    tampil(nama);
   }
+
+  function berandaAwal() { return peran() === 'admin' ? 'admin' : 'beranda'; }
 
   // ---------- Beranda ----------
   function statistik() {
-    const semua = simpan.get(KUNCI.riwayat, []).filter((r) => r.nama === state.profil.nama);
+    const semua = riwayatLokal();
     const riwayat = semua.filter((r) => kodeKategori(r.kategori) === state.tab &&
       (state.tab !== 'lomba' || !kompetisiAktif() || normal(r.kompetisi) === normal(kompetisiAktif())));
     const terbaik = {};
@@ -237,15 +285,21 @@
     return { riwayat, terbaik, beruntun, rata };
   }
 
+  function riwayatLokal() {
+    const p = state.profil;
+    return simpan.get(KUNCI.riwayat, []).filter((r) => r.nama === p.nama && (!r.sekolah || r.sekolah === p.sekolah));
+  }
+
   // Kompetisi yang dipilih di tab Lomba ('' = semua); diabaikan jika sudah tidak ada.
   function kompetisiAktif() {
-    const ada = state.bank.some((m) => m.kategori === 'lomba' && m.kompetisi === state.kompetisi);
+    const ada = bankTampil().some((m) => m.kategori === 'lomba' && m.kompetisi === state.kompetisi);
     return ada ? state.kompetisi : '';
   }
 
   function renderBeranda() {
     const p = state.profil;
     const st = statistik();
+    const bank = bankTampil();
     const jam = new Date().getHours();
     const salam = jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 18 ? 'Selamat sore' : 'Selamat malam';
     $('#teks-sapaan').textContent = `${salam}, ${p.nama.split(' ')[0]}! 🌟`;
@@ -256,7 +310,7 @@
     const tabs = $('#tabs');
     tabs.innerHTML = '';
     Object.entries(KATEGORI).forEach(([kode, k]) => {
-      const jumlah = state.bank.filter((m) => m.kategori === kode).reduce((n, m) => n + m.topik.length, 0);
+      const jumlah = bank.filter((m) => m.kategori === kode).reduce((n, m) => n + m.topik.length, 0);
       const b = el('button', { type: 'button', role: 'tab', class: 'tab' + (state.tab === kode ? ' aktif' : ''), 'aria-selected': String(state.tab === kode) },
         `${k.ikon} ${k.label} <span class="jumlah">${jumlah}</span>`);
       b.onclick = () => { state.tab = kode; simpan.set(KUNCI.tab, kode); renderBeranda(); };
@@ -266,7 +320,7 @@
 
     // Filter kompetisi (hanya di tab Lomba).
     const saring = $('#filter-kompetisi');
-    const daftarKompetisi = [...new Set(state.bank.filter((m) => m.kategori === 'lomba').map((m) => m.kompetisi || 'Lainnya'))];
+    const daftarKompetisi = [...new Set(bank.filter((m) => m.kategori === 'lomba').map((m) => m.kompetisi || 'Lainnya'))];
     saring.innerHTML = '';
     saring.hidden = state.tab !== 'lomba' || daftarKompetisi.length < 2;
     ['', ...daftarKompetisi].forEach((k) => {
@@ -285,10 +339,12 @@
 
     const wadah = $('#daftar-mapel');
     wadah.innerHTML = '';
-    const daftar = state.bank.filter((m) => m.kategori === state.tab &&
+    const daftar = bank.filter((m) => m.kategori === state.tab &&
       (state.tab !== 'lomba' || !kompetisiAktif() || m.kompetisi === kompetisiAktif()));
     if (!daftar.length) {
-      wadah.innerHTML = `<div class="card kosong">Belum ada materi ${esc(KATEGORI[state.tab].label.toLowerCase())}. Tambahkan soal di sheet "BankSoal" (kolom Kategori: ${state.tab}).</div>`;
+      wadah.innerHTML = Array.isArray(p.paket)
+        ? `<div class="card kosong">Belum ada topik ${esc(KATEGORI[state.tab].label.toLowerCase())} di paket soalmu. Minta admin menambahkannya.</div>`
+        : `<div class="card kosong">Belum ada materi ${esc(KATEGORI[state.tab].label.toLowerCase())}. Tambahkan soal di sheet "BankSoal" (kolom Kategori: ${state.tab}).</div>`;
       return;
     }
     let kompetisiTerakhir = null;
@@ -450,12 +506,13 @@
     const benar = rincian.filter((r) => r.benar).length;
     const hasil = {
       idSesi: s.idSesi, waktu: new Date().toISOString(), nama: state.profil.nama, kelas: state.profil.kelas,
+      sekolah: state.profil.sekolah, sesi: state.profil.sesi,
       kategori: s.kategori, kategoriLabel: KATEGORI[s.kategori].label, kompetisi: s.kompetisi || '', mapel: s.mapel, topik: s.topik, jumlahSoal: s.soal.length, benar, salah: s.soal.length - benar,
       nilai: Math.round(benar / s.soal.length * 100), durasiDetik: Math.round((Date.now() - s.mulai) / 1000), rincian,
     };
 
     const riwayat = simpan.get(KUNCI.riwayat, []);
-    riwayat.push(Object.assign({}, hasil, { rincian: undefined }));
+    riwayat.push(Object.assign({}, hasil, { rincian: undefined, sesi: undefined }));
     simpan.set(KUNCI.riwayat, riwayat.slice(-500));
 
     renderHasil(hasil);
@@ -496,7 +553,7 @@
   // ---------- Riwayat ----------
   async function renderRiwayat() {
     const isi = $('#riwayat-isi');
-    const lokal = simpan.get(KUNCI.riwayat, []).filter((r) => r.nama === state.profil.nama);
+    const lokal = riwayatLokal();
     const tulis = (data, sumber) => {
       $('#riwayat-sumber').textContent = sumber;
       if (!data.length) { isi.innerHTML = '<tr><td colspan="5" class="kosong">Belum ada latihan.</td></tr>'; return; }
@@ -508,16 +565,300 @@
     tulis(lokal, 'Data dari perangkat ini.');
     if (!CFG.APPS_SCRIPT_URL) return;
     try {
-      const url = CFG.APPS_SCRIPT_URL + '?action=riwayat&token=' + encodeURIComponent(CFG.TOKEN) + '&nama=' + encodeURIComponent(state.profil.nama);
-      const data = await (await fetch(url)).json();
-      if (data.ok && !$('#v-riwayat').hidden) {
+      const data = await api('riwayat', { sesi: state.profil.sesi });
+      if (!$('#v-riwayat').hidden) {
         // Gabungkan data sheet dengan yang belum terkirim.
         const ada = new Set(data.riwayat.map((r) => r.idSesi));
         const belum = lokal.filter((r) => !ada.has(r.idSesi) && simpan.get(KUNCI.antrian, []).some((a) => a.idSesi === r.idSesi));
         const semua = data.riwayat.concat(belum).sort((a, b) => new Date(a.waktu) - new Date(b.waktu));
         tulis(semua, 'Data dari Google Sheet (semua perangkat).');
       }
-    } catch (e) { /* tetap tampilkan data lokal */ }
+    } catch (e) { if (e instanceof GalatSesi) sesiBerakhir(); /* selain itu tetap tampilkan data lokal */ }
+  }
+
+  // ---------- Masuk (siswa & admin) ----------
+  function isiPilihan(select, nilai, kosong, dipilih) {
+    select.innerHTML = `<option value="">${esc(kosong)}</option>` +
+      nilai.map((v) => `<option${v === dipilih ? ' selected' : ''}>${esc(v)}</option>`).join('');
+  }
+  const urutTeks = (arr) => [...new Set(arr)].sort((a, b) => a.localeCompare(b, 'id'));
+
+  // Sekolah yang tersedia mengikuti nama siswa yang dipilih.
+  function perbaruiPilihanSekolah() {
+    const daftar = simpan.get(KUNCI.daftarSiswa, []);
+    const nama = $('#in-nama').value;
+    const sekolah = urutTeks(daftar.filter((s) => !nama || s.nama === nama).map((s) => s.sekolah));
+    const lama = $('#in-sekolah').value;
+    isiPilihan($('#in-sekolah'), sekolah, '— pilih sekolah —', sekolah.length === 1 ? sekolah[0] : lama);
+  }
+
+  function tulisDaftarSiswa() {
+    const daftar = simpan.get(KUNCI.daftarSiswa, []);
+    const lama = $('#in-nama').value;
+    isiPilihan($('#in-nama'), urutTeks(daftar.map((s) => s.nama)), daftar.length ? '— pilih nama —' : '— belum ada siswa di sheet "Siswa" —', lama);
+    perbaruiPilihanSekolah();
+  }
+
+  async function siapkanMasuk() {
+    tulisDaftarSiswa();
+    if (!CFG.APPS_SCRIPT_URL) {
+      $('#galat-masuk').textContent = 'Aplikasi belum terhubung ke Google Sheet (APPS_SCRIPT_URL di js/config.js).';
+      return;
+    }
+    try {
+      const url = CFG.APPS_SCRIPT_URL + '?action=daftar&token=' + encodeURIComponent(CFG.TOKEN);
+      const data = await (await fetch(url)).json();
+      if (data.ok) { simpan.set(KUNCI.daftarSiswa, data.siswa); tulisDaftarSiswa(); }
+    } catch (e) {
+      if (!simpan.get(KUNCI.daftarSiswa, []).length) $('#galat-masuk').textContent = 'Daftar siswa gagal dimuat. Periksa koneksi internet.';
+    }
+  }
+
+  function pilihTabMasuk(admin) {
+    $('#tab-siswa').classList.toggle('aktif', !admin);
+    $('#tab-admin').classList.toggle('aktif', admin);
+    $('#form-masuk').hidden = admin;
+    $('#form-admin').hidden = !admin;
+  }
+
+  async function prosesMasuk(form, galat, kerja) {
+    const tombol = form.querySelector('button[type=submit]');
+    const teks = tombol.textContent;
+    tombol.disabled = true;
+    tombol.textContent = 'Memeriksa…';
+    galat.textContent = '';
+    try {
+      state.profil = await kerja();
+      simpan.set(KUNCI.profil, state.profil);
+      form.reset();
+      tampil(berandaAwal());
+    } catch (e) {
+      galat.textContent = e instanceof TypeError ? 'Tidak dapat terhubung. Periksa koneksi internet.' : e.message;
+    } finally {
+      tombol.disabled = false;
+      tombol.textContent = teks;
+    }
+  }
+
+  function keluar() {
+    state.profil = null;
+    state.admin = null;
+    simpan.set(KUNCI.profil, null);
+    tampil('masuk');
+  }
+
+  // Perbarui kelas & paket soal siswa dari sheet (paket bisa diubah admin kapan saja).
+  async function segarkanProfil() {
+    if (peran() !== 'siswa' || !CFG.APPS_SCRIPT_URL) return;
+    try {
+      const d = await api('profil', { sesi: state.profil.sesi });
+      Object.assign(state.profil, { kelas: d.kelas, paket: d.paket });
+      simpan.set(KUNCI.profil, state.profil);
+    } catch (e) { if (e instanceof GalatSesi) sesiBerakhir(); }
+  }
+
+  // ---------- Admin: rekap hasil ----------
+  function tabAdmin(paket) {
+    $('#tab-rekap').classList.toggle('aktif', !paket);
+    $('#tab-paket').classList.toggle('aktif', paket);
+    $('#panel-rekap').hidden = paket;
+    $('#panel-paket').hidden = !paket;
+    if (paket) renderPaket();
+  }
+
+  async function renderAdmin() {
+    $('#admin-info').textContent = 'Memuat data dari Google Sheet…';
+    try {
+      terimaDataAdmin(await api('rekap', { sesi: state.profil.sesi }));
+    } catch (e) {
+      if (e instanceof GalatSesi) { sesiBerakhir(); return; }
+      $('#admin-info').textContent = '⚠️ Gagal memuat data: ' + (e instanceof TypeError ? 'periksa koneksi internet.' : e.message);
+    }
+  }
+
+  function terimaDataAdmin(d) {
+    state.admin = Object.assign(state.admin || {}, d);
+    const a = state.admin;
+    $('#admin-info').innerHTML = `${a.siswa.length} siswa terdaftar · ${a.hasil.length} latihan tercatat` +
+      (a.url ? ` · <a href="${esc(a.url)}" target="_blank" rel="noopener">Buka Google Sheet ↗</a>` : '');
+    const sekolah = urutTeks(a.siswa.map((s) => s.sekolah).concat(a.hasil.map((h) => h.sekolah)).filter(Boolean));
+    isiPilihan($('#f-sekolah'), sekolah, 'Semua sekolah', $('#f-sekolah').value);
+    isiFilterSiswa();
+    renderRekap();
+    if (!$('#panel-paket').hidden) renderPaket();
+  }
+
+  const kunciSiswa = (nama, sekolah) => normal(nama) + '|' + normal(sekolah);
+
+  function isiFilterSiswa() {
+    const a = state.admin;
+    const sek = $('#f-sekolah').value;
+    const nama = urutTeks(a.siswa.filter((s) => !sek || s.sekolah === sek).map((s) => s.nama));
+    isiPilihan($('#f-siswa'), nama, 'Semua siswa', $('#f-siswa').value);
+  }
+
+  function renderRekap() {
+    const a = state.admin;
+    if (!a) return;
+    const sek = $('#f-sekolah').value, nama = $('#f-siswa').value, kat = $('#f-kategori').value;
+    const data = a.hasil.filter((h) => (!sek || !h.sekolah || h.sekolah === sek) && (!sek || h.sekolah || a.siswa.some((s) => s.sekolah === sek && normal(s.nama) === normal(h.nama))) &&
+      (!nama || normal(h.nama) === normal(nama)) && (!kat || kodeKategori(h.kategori) === kat));
+    const nilai = (h) => Number(h.nilai) || 0;
+    const rata = (arr) => (arr.length ? Math.round(arr.reduce((t, h) => t + nilai(h), 0) / arr.length) : 0);
+    const tuntasDari = (arr) => {
+      const terbaik = {};
+      arr.forEach((h) => { const id = h.mapel + '::' + h.topik; terbaik[id] = Math.max(terbaik[id] || 0, nilai(h)); });
+      return Object.values(terbaik).filter((n) => n >= CFG.KKTP).length;
+    };
+    const aktif = new Set(data.map((h) => normal(h.nama)));
+    $('#rekap-stats').innerHTML = [
+      [data.length, 'Latihan'], [rata(data), 'Rata-rata nilai'], [tuntasDari(data), 'Topik tuntas'], [aktif.size, 'Siswa aktif'],
+    ].map(([b, t]) => `<div class="stat"><b>${b}</b><span>${t}</span></div>`).join('');
+
+    // Per siswa: termasuk siswa terdaftar yang belum pernah latihan.
+    const grup = new Map();
+    a.siswa.filter((s) => (!sek || s.sekolah === sek) && (!nama || s.nama === nama))
+      .forEach((s) => grup.set(kunciSiswa(s.nama, s.sekolah), { nama: s.nama, sekolah: s.sekolah, kelas: s.kelas, hasil: [] }));
+    data.forEach((h) => {
+      let k = kunciSiswa(h.nama, h.sekolah);
+      if (!h.sekolah) { const s = a.siswa.find((x) => normal(x.nama) === normal(h.nama)); if (s) k = kunciSiswa(s.nama, s.sekolah); }
+      if (!grup.has(k)) grup.set(k, { nama: h.nama, sekolah: h.sekolah || '-', kelas: h.kelas, hasil: [] });
+      grup.get(k).hasil.push(h);
+    });
+    const barisSiswa = [...grup.values()].sort((x, y) => x.nama.localeCompare(y.nama, 'id'));
+    $('#rekap-siswa').innerHTML = barisSiswa.length ? barisSiswa.map((g) => {
+      const akhir = g.hasil.length ? g.hasil.reduce((m, h) => (new Date(h.waktu) > new Date(m.waktu) ? h : m)) : null;
+      return `<tr class="klik" data-nama="${esc(g.nama)}" data-sekolah="${esc(g.sekolah)}"><td><b>${esc(g.nama)}</b></td><td>${esc(g.sekolah)}</td><td>${esc(g.kelas)}</td>
+        <td>${g.hasil.length}</td><td>${g.hasil.length ? `<span class="badge ${rata(g.hasil) >= CFG.KKTP ? 'tuntas' : 'belum'}">${rata(g.hasil)}</span>` : '-'}</td>
+        <td>${tuntasDari(g.hasil)}</td><td>${akhir ? formatTanggal(akhir.waktu) : '<span class="muted">belum latihan</span>'}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="kosong">Belum ada siswa. Isi sheet "Siswa".</td></tr>';
+    document.querySelectorAll('#rekap-siswa tr.klik').forEach((tr) => {
+      tr.onclick = () => {
+        if (a.siswa.some((s) => s.sekolah === tr.dataset.sekolah)) $('#f-sekolah').value = tr.dataset.sekolah;
+        isiFilterSiswa();
+        $('#f-siswa').value = tr.dataset.nama;
+        renderRekap();
+      };
+    });
+
+    // Per topik.
+    const topik = new Map();
+    data.forEach((h) => {
+      const k = judulMapel(h.kompetisi, h.mapel) + '::' + h.topik;
+      if (!topik.has(k)) topik.set(k, { mapel: judulMapel(h.kompetisi, h.mapel), topik: h.topik, hasil: [] });
+      topik.get(k).hasil.push(h);
+    });
+    const barisTopik = [...topik.values()].sort((x, y) => rata(x.hasil) - rata(y.hasil));
+    $('#rekap-topik').innerHTML = barisTopik.length ? barisTopik.map((t) => `<tr><td>${esc(t.mapel)}</td><td>${esc(t.topik)}</td><td>${t.hasil.length}</td>
+      <td><span class="badge ${rata(t.hasil) >= CFG.KKTP ? 'tuntas' : 'belum'}">${rata(t.hasil)}</span></td><td>${Math.max(...t.hasil.map(nilai))}</td></tr>`).join('')
+      : '<tr><td colspan="5" class="kosong">Belum ada latihan.</td></tr>';
+
+    const terbaru = data.slice().sort((x, y) => new Date(y.waktu) - new Date(x.waktu)).slice(0, 100);
+    $('#rekap-detail').innerHTML = terbaru.length ? terbaru.map((h) => `<tr><td>${formatTanggal(h.waktu)}</td><td>${esc(h.nama)}</td>
+      <td>${KATEGORI[kodeKategori(h.kategori)].ikon} ${esc(judulMapel(h.kompetisi, h.mapel))}</td><td>${esc(h.topik)}</td><td>${esc(h.benar)}/${esc(h.jumlahSoal)}</td>
+      <td><span class="badge ${nilai(h) >= CFG.KKTP ? 'tuntas' : 'belum'}">${esc(h.nilai)}</span></td><td>${esc(h.durasiMenit)} mnt</td></tr>`).join('')
+      : '<tr><td colspan="7" class="kosong">Belum ada latihan.</td></tr>';
+  }
+
+  // ---------- Admin: paket soal ----------
+  function targetPaket() {
+    try { return JSON.parse($('#paket-target').value); } catch (e) { return { jenis: 'semua', sekolah: '', nama: '' }; }
+  }
+  function cocokTarget(p, t) {
+    return p.jenis === t.jenis && normal(p.sekolah) === normal(t.sekolah) && normal(p.nama) === normal(t.nama);
+  }
+  function paketTarget(t) { return (state.admin.paket || []).find((p) => cocokTarget(p, t)); }
+
+  function renderPaket() {
+    const a = state.admin;
+    if (!a) return;
+    const pilihan = [{ jenis: 'semua', sekolah: '', nama: '', label: '👥 Semua siswa' }];
+    urutTeks(a.siswa.map((s) => s.sekolah)).forEach((sek) => {
+      pilihan.push({ jenis: 'sekolah', sekolah: sek, nama: '', label: `🏫 Sekolah: ${sek}` });
+      a.siswa.filter((s) => s.sekolah === sek).sort((x, y) => x.nama.localeCompare(y.nama, 'id'))
+        .forEach((s) => pilihan.push({ jenis: 'siswa', sekolah: sek, nama: s.nama, label: `　🎒 ${s.nama} (${sek})` }));
+    });
+    const lama = $('#paket-target').value;
+    $('#paket-target').innerHTML = pilihan.map((p) => {
+      const v = JSON.stringify({ jenis: p.jenis, sekolah: p.sekolah, nama: p.nama });
+      const tanda = paketTarget(p) ? ' ✔' : '';
+      return `<option value="${esc(v)}"${v === lama ? ' selected' : ''}>${esc(p.label + tanda)}</option>`;
+    }).join('');
+    tulisDaftarPaket();
+  }
+
+  function tulisDaftarPaket() {
+    const t = targetPaket();
+    const p = paketTarget(t);
+    // Tanpa paket sendiri → tampilkan paket yang sedang berlaku dari tingkat di atasnya.
+    const induk = t.jenis === 'siswa' ? paketTarget({ jenis: 'sekolah', sekolah: t.sekolah, nama: '' }) || paketTarget({ jenis: 'semua', sekolah: '', nama: '' })
+      : t.jenis === 'sekolah' ? paketTarget({ jenis: 'semua', sekolah: '', nama: '' }) : null;
+    const dipakai = p || induk;
+    const pilih = new Set(dipakai ? dipakai.topik : state.bank.flatMap((m) => m.topik.map((x) => idTopik(m.kategori, m.kompetisi, m.mapel, x.nama))));
+    $('#paket-status').innerHTML = p ? `✔ Paket khusus aktif (${p.topik.length} topik)${p.diperbarui ? ', diperbarui ' + formatTanggal(p.diperbarui) : ''}.`
+      : induk ? `Belum ada paket khusus. Saat ini mengikuti paket <b>${esc(induk.jenis === 'semua' ? 'semua siswa' : 'sekolah ' + induk.sekolah)}</b> (${induk.topik.length} topik).`
+        : 'Belum ada paket: semua topik terbuka. Centang topik lalu simpan untuk membuat paket.';
+    $('#paket-hapus').hidden = !p;
+    $('#paket-pesan').textContent = '';
+
+    const wadah = $('#paket-daftar');
+    wadah.innerHTML = '';
+    Object.entries(KATEGORI).forEach(([kode, k]) => {
+      const mapel = state.bank.filter((m) => m.kategori === kode);
+      if (!mapel.length) return;
+      wadah.appendChild(el('h3', { class: 'grup-kategori' }, `${k.ikon} ${esc(k.label)}`));
+      mapel.forEach((m) => {
+        const fs = el('fieldset');
+        const judul = el('legend', {}, `<label><input type="checkbox" class="cek-mapel"> ${esc(m.ikon || '📘')} ${esc(judulMapel(m.kompetisi, m.mapel))} <span class="jumlah-pilih"></span></label>`);
+        fs.appendChild(judul);
+        m.topik.forEach((x) => {
+          const id = idTopik(m.kategori, m.kompetisi, m.mapel, x.nama);
+          const lbl = el('label', { class: 'cek' }, `<input type="checkbox" class="cek-topik"> <span>${esc(x.nama)} <span class="muted small">· ${x.soal.length} soal</span></span>`);
+          const cb = lbl.querySelector('input');
+          cb.value = id;
+          cb.checked = pilih.has(id);
+          fs.appendChild(lbl);
+        });
+        const semuaCek = () => fs.querySelectorAll('.cek-topik');
+        const sinkron = () => {
+          const n = [...semuaCek()].filter((c) => c.checked).length;
+          const induk = judul.querySelector('.cek-mapel');
+          induk.checked = n === semuaCek().length;
+          induk.indeterminate = n > 0 && n < semuaCek().length;
+          judul.querySelector('.jumlah-pilih').textContent = `(${n}/${semuaCek().length})`;
+        };
+        judul.querySelector('.cek-mapel').onchange = (e) => { semuaCek().forEach((c) => (c.checked = e.target.checked)); sinkron(); };
+        semuaCek().forEach((c) => (c.onchange = sinkron));
+        sinkron();
+        wadah.appendChild(fs);
+      });
+    });
+  }
+
+  function setSemuaPaket(nilai) {
+    document.querySelectorAll('#paket-daftar input[type=checkbox]').forEach((c) => { c.checked = nilai; c.indeterminate = false; });
+    document.querySelectorAll('#paket-daftar fieldset').forEach((fs) => {
+      const n = fs.querySelectorAll('.cek-topik').length;
+      fs.querySelector('.jumlah-pilih').textContent = `(${nilai ? n : 0}/${n})`;
+    });
+  }
+
+  async function simpanPaket(hapus) {
+    const t = targetPaket();
+    const topik = [...document.querySelectorAll('#paket-daftar .cek-topik:checked')].map((c) => c.value);
+    if (!hapus && !topik.length && !confirm('Tidak ada topik yang dicentang. Siswa tidak akan melihat topik apa pun. Tetap simpan?')) return;
+    if (hapus && !confirm('Hapus paket ini? Siswa akan kembali memakai paket di atasnya (atau semua topik).')) return;
+    const pesan = $('#paket-pesan');
+    pesan.textContent = 'Menyimpan…';
+    try {
+      const d = await api('paket-simpan', Object.assign({ sesi: state.profil.sesi, topik: hapus ? null : topik }, t));
+      state.admin.paket = d.paket;
+      renderPaket();
+      $('#paket-pesan').textContent = hapus ? '✅ Paket dihapus.' : `✅ Paket tersimpan (${topik.length} topik). Siswa melihatnya saat membuka aplikasi berikutnya.`;
+    } catch (e) {
+      if (e instanceof GalatSesi) { sesiBerakhir(); return; }
+      pesan.textContent = '⚠️ Gagal menyimpan: ' + (e instanceof TypeError ? 'periksa koneksi internet.' : e.message);
+    }
   }
 
   // ---------- Event ----------
@@ -526,19 +867,37 @@
       const go = e.target.closest('[data-go]');
       if (go) pergi(go.dataset.go);
     });
+    $('#tab-siswa').onclick = () => pilihTabMasuk(false);
+    $('#tab-admin').onclick = () => pilihTabMasuk(true);
+    $('#in-nama').onchange = perbaruiPilihanSekolah;
     $('#form-masuk').onsubmit = (e) => {
       e.preventDefault();
-      state.profil = { nama: $('#in-nama').value.trim().replace(/\s+/g, ' '), kelas: $('#in-kelas').value };
-      if (!state.profil.nama) return;
-      simpan.set(KUNCI.profil, state.profil);
-      tampil('beranda');
+      prosesMasuk($('#form-masuk'), $('#galat-masuk'), async () => {
+        const d = await api('login', { nama: $('#in-nama').value, sekolah: $('#in-sekolah').value, password: $('#in-password').value });
+        return { peran: 'siswa', nama: d.nama, sekolah: d.sekolah, kelas: d.kelas, paket: d.paket, sesi: d.sesi };
+      });
+    };
+    $('#form-admin').onsubmit = (e) => {
+      e.preventDefault();
+      prosesMasuk($('#form-admin'), $('#galat-admin'), async () => {
+        const d = await api('login-admin', { password: $('#in-password-admin').value });
+        return { peran: 'admin', nama: 'Admin', sesi: d.sesi };
+      });
     };
     $('#btn-keluar').onclick = () => {
-      if (!confirm('Ganti nama pengguna?')) return;
-      state.profil = null;
-      simpan.set(KUNCI.profil, null);
-      tampil('masuk');
+      if (!confirm('Keluar dari akun ini?')) return;
+      keluar();
     };
+    $('#tab-rekap').onclick = () => tabAdmin(false);
+    $('#tab-paket').onclick = () => tabAdmin(true);
+    $('#f-sekolah').onchange = () => { isiFilterSiswa(); renderRekap(); };
+    $('#f-siswa').onchange = renderRekap;
+    $('#f-kategori').onchange = renderRekap;
+    $('#paket-target').onchange = tulisDaftarPaket;
+    $('#paket-semua').onclick = () => setSemuaPaket(true);
+    $('#paket-kosong').onclick = () => setSemuaPaket(false);
+    $('#paket-simpan').onclick = () => simpanPaket(false);
+    $('#paket-hapus').onclick = () => simpanPaket(true);
     $('#btn-mulai-dari-materi').onclick = () => mulaiKuis(state.topikAktif);
     $('#btn-sebelum').onclick = () => { if (state.sesi.indeks > 0) { state.sesi.indeks--; renderSoal(); } };
     $('#btn-berikut').onclick = () => {
@@ -558,11 +917,11 @@
     document.title = CFG.JUDUL || 'Belajar Mandiri';
     $('#judul-app').textContent = CFG.JUDUL || 'Belajar Mandiri';
     pasangEvent();
-    if (state.profil) { $('#in-nama').value = state.profil.nama; $('#in-kelas').value = state.profil.kelas; }
     state.bank = gabungBank(simpan.get(KUNCI.soalSheet, null));
-    tampil(state.profil ? 'beranda' : 'masuk');
-    await muatBank();
-    if (state.profil && !$('#v-beranda').hidden) renderBeranda();
+    tampil(state.profil ? berandaAwal() : 'masuk');
+    await Promise.all([muatBank(), segarkanProfil()]);
+    if (peran() === 'siswa' && !$('#v-beranda').hidden) renderBeranda();
+    if (peran() === 'admin' && !$('#panel-paket').hidden) renderPaket();
     kirimAntrian();
   }
 

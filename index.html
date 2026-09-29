@@ -11,9 +11,11 @@
   <header class="topbar">
     <button class="brand" data-go="beranda" type="button">📚 <span id="judul-app">Belajar Mandiri</span></button>
     <nav id="nav" hidden>
-      <button data-go="beranda" type="button">Beranda</button>
-      <button data-go="riwayat" type="button">Riwayat</button>
-      <button id="btn-keluar" type="button">Ganti Nama</button>
+      <button data-go="beranda" data-peran="siswa" type="button">Beranda</button>
+      <button data-go="riwayat" data-peran="siswa" type="button">Riwayat</button>
+      <button data-go="admin" data-peran="admin" type="button">Rekap &amp; Paket</button>
+      <span class="nama-pengguna" id="nama-pengguna"></span>
+      <button id="btn-keluar" type="button">Keluar</button>
     </nav>
   </header>
 
@@ -23,26 +25,31 @@
     <!-- Masuk -->
     <section id="v-masuk" class="view card narrow" hidden>
       <h1>Halo! 👋</h1>
-      <p class="muted">Tulis namamu dulu sebelum mulai belajar.</p>
+      <div class="tabs kecil" role="tablist">
+        <button class="tab aktif" id="tab-siswa" type="button" role="tab">🎒 Siswa</button>
+        <button class="tab" id="tab-admin" type="button" role="tab">🛡️ Admin</button>
+      </div>
       <form id="form-masuk">
-        <label>Nama
-          <input id="in-nama" required maxlength="40" autocomplete="name" placeholder="Nama lengkap">
+        <p class="muted small">Pilih namamu, sekolahmu, lalu tulis password.</p>
+        <label>Nama Siswa
+          <select id="in-nama" required><option value="">— memuat daftar siswa… —</option></select>
         </label>
-        <label>Kelas
-          <select id="in-kelas" required>
-            <option value="">— pilih kelas —</option>
-            <option value="7">Kelas 7 (1 MTs/SMP)</option>
-            <option value="8">Kelas 8 (2 MTs/SMP)</option>
-            <option value="9">Kelas 9 (3 MTs/SMP)</option>
-            <option value="10">Kelas 10 (1 MA/SMA)</option>
-            <option value="11">Kelas 11 (2 MA/SMA)</option>
-            <option value="12">Kelas 12 (3 MA/SMA)</option>
-            <option value="1">Kelas 1 MI/SD</option><option value="2">Kelas 2 MI/SD</option>
-            <option value="3">Kelas 3 MI/SD</option><option value="4">Kelas 4 MI/SD</option>
-            <option value="5">Kelas 5 MI/SD</option><option value="6">Kelas 6 MI/SD</option>
-          </select>
+        <label>Nama Sekolah
+          <select id="in-sekolah" required><option value="">— pilih sekolah —</option></select>
         </label>
-        <button class="btn primary" type="submit">Mulai Belajar</button>
+        <label>Password
+          <input id="in-password" type="password" required autocomplete="current-password" placeholder="Password">
+        </label>
+        <button class="btn primary" type="submit">Masuk</button>
+        <p class="pesan-galat" id="galat-masuk" role="alert"></p>
+      </form>
+      <form id="form-admin" hidden>
+        <p class="muted small">Khusus orang tua/guru: melihat rekap hasil dan memilih paket soal.</p>
+        <label>Password Admin
+          <input id="in-password-admin" type="password" required autocomplete="current-password" placeholder="Password admin">
+        </label>
+        <button class="btn primary" type="submit">Masuk sebagai Admin</button>
+        <p class="pesan-galat" id="galat-admin" role="alert"></p>
       </form>
     </section>
 
@@ -113,6 +120,79 @@
           <thead><tr><th>Tanggal</th><th>Mapel</th><th>Topik</th><th>Benar</th><th>Nilai</th></tr></thead>
           <tbody id="riwayat-isi"></tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- Admin -->
+    <section id="v-admin" class="view" hidden>
+      <div class="sapaan">
+        <h1>🛡️ Halaman Admin</h1>
+        <p class="muted small" id="admin-info">Memuat data…</p>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab aktif" id="tab-rekap" type="button" role="tab">📊 Rekap Hasil</button>
+        <button class="tab" id="tab-paket" type="button" role="tab">📦 Paket Soal</button>
+      </div>
+
+      <div id="panel-rekap">
+        <div class="filter-baris">
+          <label>Sekolah <select id="f-sekolah"></select></label>
+          <label>Siswa <select id="f-siswa"></select></label>
+          <label>Kategori
+            <select id="f-kategori">
+              <option value="">Semua</option>
+              <option value="pelajaran">📘 Materi Pelajaran</option>
+              <option value="lomba">🏆 Persiapan Lomba</option>
+            </select>
+          </label>
+        </div>
+        <div class="stats" id="rekap-stats"></div>
+        <div class="card">
+          <h2>Rekap per Siswa</h2>
+          <div class="tabel-wrap">
+            <table>
+              <thead><tr><th>Siswa</th><th>Sekolah</th><th>Kelas</th><th>Latihan</th><th>Rata-rata</th><th>Topik Tuntas</th><th>Terakhir</th></tr></thead>
+              <tbody id="rekap-siswa"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Rekap per Topik</h2>
+          <div class="tabel-wrap">
+            <table>
+              <thead><tr><th>Mapel</th><th>Topik</th><th>Latihan</th><th>Rata-rata</th><th>Tertinggi</th></tr></thead>
+              <tbody id="rekap-topik"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Latihan Terbaru</h2>
+          <div class="tabel-wrap">
+            <table>
+              <thead><tr><th>Tanggal</th><th>Siswa</th><th>Mapel</th><th>Topik</th><th>Benar</th><th>Nilai</th><th>Durasi</th></tr></thead>
+              <tbody id="rekap-detail"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-paket" hidden>
+        <div class="card">
+          <p class="muted small">Pilih topik yang boleh dikerjakan. Paket untuk siswa tertentu diutamakan,
+            lalu paket sekolah, lalu paket semua siswa. Tanpa paket, semua topik terbuka.</p>
+          <label>Berlaku untuk <select id="paket-target"></select></label>
+          <p class="small" id="paket-status"></p>
+          <div class="aksi">
+            <button class="btn sm" id="paket-semua" type="button">Pilih semua</button>
+            <button class="btn sm" id="paket-kosong" type="button">Kosongkan</button>
+          </div>
+          <div id="paket-daftar" class="paket-daftar"></div>
+          <div class="aksi spread">
+            <button class="btn" id="paket-hapus" type="button">Hapus paket (buka semua topik)</button>
+            <button class="btn primary" id="paket-simpan" type="button">💾 Simpan Paket</button>
+          </div>
+          <p class="small" id="paket-pesan" role="status"></p>
+        </div>
       </div>
     </section>
   </main>
