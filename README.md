@@ -9,10 +9,12 @@ perkembangan belajar dari HP atau laptop.
 Beranda memiliki dua tab:
 
 - **📘 Materi Pelajaran**: materi dan latihan sesuai pelajaran di madrasah
-- **🏆 Persiapan Lomba**: soal tingkat lanjut untuk KSM (Kompetisi Sains Madrasah) atau OSN
+- **🏆 Persiapan Lomba**: latihan per **kompetisi** → mapel → topik. Saat ini ada KMSI 2026
+  (Kompetisi Matematika, Sains, dan Inggris) dan KSM (Kompetisi Sains Madrasah). Tombol filter
+  di atas daftar memilih kompetisi yang ditampilkan.
 
 Statistik di beranda dihitung per kategori. Di Google Sheet, setiap hasil latihan
-juga dicatat kategorinya (kolom **Kategori** pada sheet Hasil dan Rincian), dan sheet
+juga dicatat kategori dan kompetisinya (kolom **Kategori** dan **Kompetisi** pada sheet Hasil dan Rincian), dan sheet
 **Ringkasan** merekap nilai per kategori.
 
 ## Isi Bawaan: Materi Pelajaran Kelas 7 (1 MTs), Semester 1
@@ -33,18 +35,21 @@ juga dicatat kategorinya (kolom **Kategori** pada sheet Hasil dan Rincian), dan 
 Mengacu pada Kurikulum Merdeka kelas 7 dan mapel PAI/Bahasa Arab madrasah (KMA 347/2022).
 Sesuaikan dengan urutan materi di madrasah anak Anda melalui sheet **BankSoal**.
 
-## Isi Bawaan: Persiapan Lomba (format KSM MTs)
+## Isi Bawaan: Persiapan Lomba — KSM (Kompetisi Sains Madrasah)
 
 | Mapel | Topik | Soal |
 |---|---|---|
-| Matematika Terintegrasi (KSM) | Teori Bilangan dan Pola | 11 |
-| IPA Terintegrasi (KSM) | Sains dalam Al-Qur'an | 9 |
-| IPS Terintegrasi (KSM) | Geografi, Sejarah, dan Ekonomi Islam | 8 |
+| Matematika Terintegrasi | Teori Bilangan dan Pola | 11 |
+| IPA Terintegrasi | Sains dalam Al-Qur'an | 9 |
+| IPS Terintegrasi | Geografi, Sejarah, dan Ekonomi Islam | 8 |
 
-### KMSI 2026 — Babak Penyisihan, Level 4
+## Isi Bawaan: Persiapan Lomba — KMSI 2026 (Kompetisi Matematika, Sains, dan Inggris)
+
+Babak Penyisihan, **Level 4**.
 
 Disusun dari kisi-kisi resmi KMSI 2026 (Yayasan Intan Mutia), file `js/soal-kmsi-level4.js`.
-Setiap mapel punya topik **Simulasi Penyisihan** (25 soal acak dari semua indikator)
+Setiap mapel punya topik **Simulasi Penyisihan** (25 soal acak dari semua topik mapel itu,
+termasuk soal tambahan dari Google Sheet)
 dan topik latihan per kelompok indikator.
 
 | Mapel | Topik latihan (indikator kisi-kisi) | Soal |
@@ -111,13 +116,17 @@ agar terasa seperti aplikasi.
 | Mapel | Topik | Kelas | Tipe (pg/isian) | Pertanyaan | A | B | C | D | Jawaban | Pembahasan | Kategori |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | Matematika | Bilangan Bulat | 7 | pg | −3 × 4 = ... | −12 | 12 | −7 | 1 | A | Tanda berbeda → negatif | pelajaran |
-| IPA Terintegrasi (KSM) | Ekosistem | 7 | isian | Hewan yang namanya menjadi nama surah ke-16 adalah ... | | | | | lebah | QS. An-Nahl = lebah | lomba |
+| IPA Terintegrasi | Ekosistem | 7 | isian | Hewan yang namanya menjadi nama surah ke-16 adalah ... | | | | | lebah | QS. An-Nahl = lebah | lomba |
 
 - Kolom **Kategori**: isi `pelajaran` atau `lomba`. Jika dikosongkan, dianggap `pelajaran`.
+- Kolom **Kompetisi** (khusus lomba): nama kompetisi, misalnya `KMSI 2026` atau `KSM`. Jika diisi,
+  soal otomatis masuk tab Persiapan Lomba. Mapel + Topik + Kompetisi yang sama dengan yang sudah
+  ada akan menambah topik tersebut (huruf besar/kecil tidak berpengaruh); nama baru membuat topik
+  atau kompetisi baru.
 - Tipe `pg`: kolom Jawaban diisi huruf (A/B/C/D).
 - Tipe `isian`: kolom Jawaban diisi teks. Beberapa jawaban benar dipisah `|`,
   misalnya `63|enam puluh tiga`. Huruf besar/kecil tidak berpengaruh.
-- Sheet **Materi**: kolom Mapel, Topik, Kelas, Materi, Kategori. Di teks materi, baris kosong
+- Sheet **Materi**: kolom Mapel, Topik, Kelas, Materi, Kategori, Kompetisi. Di teks materi, baris kosong
   = paragraf baru, awali baris dengan `- ` untuk daftar, `**teks**` untuk tebal.
 
 Soal bawaan juga bisa diubah di [`js/bank-soal.js`](js/bank-soal.js).

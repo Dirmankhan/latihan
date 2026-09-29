@@ -1,7 +1,8 @@
-// Soal latihan KMSI 2026 — Babak Penyisihan, LEVEL 4.
-// Disusun berdasarkan kisi-kisi resmi penyelenggara (Yayasan Intan Mutia).
-// Masuk ke tab "Persiapan Lomba". Topik "Simulasi Penyisihan" mengacak soal
-// dari semua indikator pada mapel tersebut.
+// Soal latihan KMSI 2026 (Kompetisi Matematika, Sains, dan Inggris)
+// Babak Penyisihan, LEVEL 4 — disusun berdasarkan kisi-kisi resmi penyelenggara
+// (Yayasan Intan Mutia). Tampil di tab "Persiapan Lomba" dengan kompetisi "KMSI 2026".
+// Topik bertanda `simulasi: true` otomatis berisi semua soal dari topik lain pada
+// mapel yang sama, termasuk soal tambahan dari Google Sheet.
 (function () {
   const pg = (pertanyaan, pilihan, jawaban, pembahasan) => ({ tipe: 'pg', pertanyaan, pilihan, jawaban, pembahasan });
   const isian = (pertanyaan, jawaban, pembahasan) => ({ tipe: 'isian', pertanyaan, jawaban, pembahasan });
@@ -200,15 +201,23 @@
     pg('"Happy Eid al-Fitr! Wishing you and your family peace and happiness." This text is a/an ...', ['announcement', 'invitation', 'greeting card', 'recipe'], 'C', 'Ucapan selamat hari raya adalah greeting card.'),
   ];
 
-  const simulasi = (...kelompok) => [].concat(...kelompok);
+  const gabung = (...kelompok) => [].concat(...kelompok);
+
+  window.INFO_KOMPETISI = Object.assign(window.INFO_KOMPETISI || {}, {
+    'KMSI 2026': {
+      nama: 'Kompetisi Matematika, Sains, dan Inggris',
+      keterangan: 'Babak Penyisihan · Level 4 · disusun dari kisi-kisi resmi penyelenggara (Yayasan Intan Mutia).',
+    },
+  });
 
   window.BANK_SOAL.push(
     {
-      mapel: 'KMSI 2026 · Matematika (Level 4)',
+      mapel: 'Matematika',
       kategori: 'lomba',
+      kompetisi: 'KMSI 2026',
       ikon: '🧮',
       topik: [
-        { nama: 'Simulasi Penyisihan Matematika', kelas: 'Level 4', soalPerSesi: 25, materi: `Simulasi ini mengambil **25 soal acak** dari semua indikator kisi-kisi KMSI 2026 Level 4:
+        { nama: 'Simulasi Penyisihan Matematika', kelas: 'Level 4', soalPerSesi: 25, simulasi: true, materi: `Simulasi ini mengambil **25 soal acak** dari semua indikator kisi-kisi KMSI 2026 Level 4:
 
 - Operasi bilangan dan teori bilangan
 - Bangun datar dan bangun ruang
@@ -216,7 +225,7 @@
 - Aritmetika sosial dan perbandingan
 - Statistika dan peluang
 
-Tips: kerjakan soal yang mudah dulu, tandai soal sulit, dan kembali lagi di akhir.`, soal: simulasi(mtkBilangan, mtkBangun, mtkAljabar, mtkSosial, mtkStatistika) },
+Tips: kerjakan soal yang mudah dulu, tandai soal sulit, dan kembali lagi di akhir.`, soal: [] },
         { nama: 'Operasi Bilangan dan Teori Bilangan', kelas: 'Level 4', materi: `**Kisi-kisi:** operasi bilangan, teori bilangan.
 
 - Urutan operasi: kurung → pangkat/akar → kali/bagi (kiri ke kanan) → tambah/kurang
@@ -262,11 +271,12 @@ Tips: kerjakan soal yang mudah dulu, tandai soal sulit, dan kembali lagi di akhi
       ],
     },
     {
-      mapel: 'KMSI 2026 · Sains (Level 4)',
+      mapel: 'Sains',
       kategori: 'lomba',
+      kompetisi: 'KMSI 2026',
       ikon: '🔬',
       topik: [
-        { nama: 'Simulasi Penyisihan Sains', kelas: 'Level 4', soalPerSesi: 25, materi: `Simulasi ini mengambil **25 soal acak** dari semua indikator kisi-kisi KMSI 2026 Level 4:
+        { nama: 'Simulasi Penyisihan Sains', kelas: 'Level 4', soalPerSesi: 25, simulasi: true, materi: `Simulasi ini mengambil **25 soal acak** dari semua indikator kisi-kisi KMSI 2026 Level 4:
 
 - Makhluk hidup (hewan dan tumbuhan)
 - Kesehatan dan tubuh manusia
@@ -274,7 +284,7 @@ Tips: kerjakan soal yang mudah dulu, tandai soal sulit, dan kembali lagi di akhi
 - Genetika dan bioteknologi
 - Zat dan perubahan (fisika dan kimia)
 - Energi dan gaya
-- Metode ilmiah`, soal: simulasi(snsMakhluk, snsTubuh, snsEkologi, snsGenetika, snsBioteknologi, snsZat, snsEnergi, snsMetode) },
+- Metode ilmiah`, soal: [] },
         { nama: 'Makhluk Hidup, Kesehatan, dan Tubuh Manusia', kelas: 'Level 4', materi: `**Kisi-kisi:** makhluk hidup (hewan dan tumbuhan), kesehatan dan tubuh manusia.
 
 - Sel tumbuhan punya **dinding sel** dan **kloroplas**; sel hewan tidak
@@ -284,7 +294,7 @@ Tips: kerjakan soal yang mudah dulu, tandai soal sulit, dan kembali lagi di akhi
 - Pencernaan: mulut (ptialin) → lambung (pepsin, HCl) → usus halus (penyerapan) → usus besar
 - Pernapasan: pertukaran gas di **alveolus**
 - Darah: eritrosit (angkut O₂), leukosit (imunitas), trombosit (pembekuan)
-- Vitamin A (rabun senja), B1 (beri-beri), C (skorbut), D (rakitis); zat besi (anemia)`, soal: simulasi(snsMakhluk, snsTubuh) },
+- Vitamin A (rabun senja), B1 (beri-beri), C (skorbut), D (rakitis); zat besi (anemia)`, soal: gabung(snsMakhluk, snsTubuh) },
         { nama: 'Ekologi dan Lingkungan', kelas: 'Level 4', materi: `**Kisi-kisi:** ekologi dan lingkungan.
 
 - Individu → populasi (sejenis) → komunitas (berbagai jenis) → ekosistem (+ lingkungan abiotik)
@@ -299,7 +309,7 @@ Tips: kerjakan soal yang mudah dulu, tandai soal sulit, dan kembali lagi di akhi
 - Monohibrid Tt × Tt → genotipe 1 TT : 2 Tt : 1 tt; fenotipe 3 : 1
 - Tt × tt → 1 Tt : 1 tt (50% : 50%)
 - **Bioteknologi konvensional**: tempe (Rhizopus), tapai/roti (Saccharomyces), yoghurt (Lactobacillus bulgaricus), nata de coco (Acetobacter xylinum), kecap (Aspergillus)
-- **Bioteknologi modern**: rekayasa genetika (insulin dari bakteri), tanaman transgenik, kultur jaringan (totipotensi)`, soal: simulasi(snsGenetika, snsBioteknologi) },
+- **Bioteknologi modern**: rekayasa genetika (insulin dari bakteri), tanaman transgenik, kultur jaringan (totipotensi)`, soal: gabung(snsGenetika, snsBioteknologi) },
         { nama: 'Zat dan Perubahannya', kelas: 'Level 4', materi: `**Kisi-kisi:** zat dan perubahan (fisika dan kimia).
 
 - Unsur (Na, O₂, Au), senyawa (H₂O, NaCl), campuran (udara, air garam)
@@ -314,21 +324,22 @@ Tips: kerjakan soal yang mudah dulu, tandai soal sulit, dan kembali lagi di akhi
 - km/jam → m/s: kalikan 1000/3600 (bagi 3,6)
 - Hukum Newton I (kelembaman), II (F = m × a), III (aksi = −reaksi)
 - Metode ilmiah: masalah → hipotesis → eksperimen → analisis → kesimpulan
-- Variabel bebas (diubah), terikat (diukur), kontrol (dibuat sama)`, soal: simulasi(snsEnergi, snsMetode) },
+- Variabel bebas (diubah), terikat (diukur), kontrol (dibuat sama)`, soal: gabung(snsEnergi, snsMetode) },
       ],
     },
     {
-      mapel: 'KMSI 2026 · Bahasa Inggris (Level 4)',
+      mapel: 'Bahasa Inggris',
       kategori: 'lomba',
+      kompetisi: 'KMSI 2026',
       ikon: '🇬🇧',
       topik: [
-        { nama: 'Simulasi Penyisihan Bahasa Inggris', kelas: 'Level 4', soalPerSesi: 25, materi: `This simulation takes **25 random questions** from all KMSI 2026 Level 4 indicators:
+        { nama: 'Simulasi Penyisihan Bahasa Inggris', kelas: 'Level 4', soalPerSesi: 25, simulasi: true, materi: `This simulation takes **25 random questions** from all KMSI 2026 Level 4 indicators:
 
 - Vocabulary, synonym, antonym, part of speech
 - Prepositions, tenses, modals, conditional sentences, comparison
 - Speaking expressions
 - Reading: report, descriptive, biography/recount, data, public signs
-- Functional texts: announcement, invitation, greeting card`, soal: simulasi(ingVocab, ingGrammar, ingEkspresi, ingReading, ingFungsional) },
+- Functional texts: announcement, invitation, greeting card`, soal: [] },
         { nama: 'Vocabulary and Word Meaning', kelas: 'Level 4', materi: `**Kisi-kisi:** vocabulary, synonym, antonym; part of speech and word meaning in context.
 
 - **Synonym** = kata yang artinya sama (big = large = huge = enormous)
@@ -354,7 +365,7 @@ Tips: kerjakan soal yang mudah dulu, tandai soal sulit, dan kembali lagi di akhi
 - Thanking: Thank you. → You're welcome. / My pleasure.
 - **Announcement**: informasi untuk umum (apa, kapan, di mana, siapa pembuatnya)
 - **Invitation**: ajakan menghadiri acara (acara, waktu, tempat, pengundang)
-- **Greeting card**: ucapan selamat (hari raya, ulang tahun, keberhasilan)`, soal: simulasi(ingEkspresi, ingFungsional) },
+- **Greeting card**: ucapan selamat (hari raya, ulang tahun, keberhasilan)`, soal: gabung(ingEkspresi, ingFungsional) },
         { nama: 'Reading: Texts, Data, and Public Signs', kelas: 'Level 4', materi: `**Kisi-kisi:** descriptive/report text; biography/recount text; data reading; public space, environment, and general knowledge.
 
 - **Descriptive text**: menggambarkan orang/tempat/benda **tertentu** (identification → description)

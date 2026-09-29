@@ -19,12 +19,12 @@ const SHEET_MATERI = 'Materi';
 const SHEET_RINGKASAN = 'Ringkasan';
 
 const HEADER_HASIL = ['Waktu', 'Nama', 'Kelas', 'Mapel', 'Topik', 'Jumlah Soal',
-  'Benar', 'Salah', 'Nilai', 'Durasi (menit)', 'ID Sesi', 'Kategori'];
+  'Benar', 'Salah', 'Nilai', 'Durasi (menit)', 'ID Sesi', 'Kategori', 'Kompetisi'];
 const HEADER_RINCIAN = ['Waktu', 'Nama', 'Mapel', 'Topik', 'No', 'Pertanyaan',
-  'Jawaban Anak', 'Kunci', 'Hasil', 'ID Sesi', 'Kategori'];
+  'Jawaban Anak', 'Kunci', 'Hasil', 'ID Sesi', 'Kategori', 'Kompetisi'];
 const HEADER_SOAL = ['Mapel', 'Topik', 'Kelas', 'Tipe (pg/isian)', 'Pertanyaan',
-  'A', 'B', 'C', 'D', 'Jawaban', 'Pembahasan', 'Kategori (pelajaran/lomba)'];
-const HEADER_MATERI = ['Mapel', 'Topik', 'Kelas', 'Materi', 'Kategori (pelajaran/lomba)'];
+  'A', 'B', 'C', 'D', 'Jawaban', 'Pembahasan', 'Kategori (pelajaran/lomba)', 'Kompetisi (khusus lomba)'];
+const HEADER_MATERI = ['Mapel', 'Topik', 'Kelas', 'Materi', 'Kategori (pelajaran/lomba)', 'Kompetisi (khusus lomba)'];
 
 /** Jalankan sekali dari editor Apps Script untuk menyiapkan semua sheet. */
 function setup() {
@@ -36,20 +36,20 @@ function setup() {
   if (soal.getLastRow() === 1) {
     soal.getRange(2, 1, 3, HEADER_SOAL.length).setValues([
       ['Matematika', 'Contoh dari Sheet', '7', 'pg', 'Hasil dari 12 × 5 adalah ...',
-        '50', '60', '70', '17', 'B', '12 × 5 = 60.', 'pelajaran'],
+        '50', '60', '70', '17', 'B', '12 × 5 = 60.', 'pelajaran', ''],
       ['Matematika', 'Contoh dari Sheet', '7', 'isian', 'Hasil dari 100 − 37 adalah ...',
-        '', '', '', '', '63', '100 − 37 = 63.', 'pelajaran'],
-      ['Matematika Terintegrasi (KSM)', 'Contoh Lomba dari Sheet', '7', 'isian',
+        '', '', '', '', '63', '100 − 37 = 63.', 'pelajaran', ''],
+      ['Matematika', 'Teori Bilangan', 'Level 4', 'isian',
         'Jumlah 1 + 2 + 3 + ... + 50 adalah ...', '', '', '', '', '1275',
-        '(50 × 51) : 2 = 1.275.', 'lomba'],
+        '(50 × 51) : 2 = 1.275.', 'lomba', 'KMSI 2026'],
     ]);
   }
   const materi = siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI);
   if (materi.getLastRow() === 1) {
-    materi.getRange(2, 1, 1, 5).setValues([[
+    materi.getRange(2, 1, 1, 6).setValues([[
       'Matematika', 'Contoh dari Sheet', '7',
       'Ini contoh materi yang ditulis di Google Sheet.\n\n- Baris yang diawali tanda minus menjadi daftar\n- Gunakan **teks** untuk huruf tebal',
-      'pelajaran',
+      'pelajaran', '',
     ]]);
   }
 
@@ -58,14 +58,14 @@ function setup() {
   ringkasan.clear();
   ringkasan.getRange('A1').setValue('Rekap per Kategori, Mapel & Topik').setFontWeight('bold');
   ringkasan.getRange('A2').setFormula(
-    '=IFERROR(QUERY(Hasil!A:L,"select B, L, D, E, count(I), avg(I), max(I), max(A) ' +
-    'where B is not null group by B, L, D, E ' +
+    '=IFERROR(QUERY(Hasil!A:M,"select B, L, M, D, E, count(I), avg(I), max(I), max(A) ' +
+    'where B is not null group by B, L, M, D, E ' +
     'label count(I) \'Jumlah Latihan\', avg(I) \'Rata-rata Nilai\', ' +
     'max(I) \'Nilai Tertinggi\', max(A) \'Terakhir Latihan\'",1),"Belum ada data")');
-  ringkasan.getRange('K1').setValue('Soal yang Paling Sering Salah').setFontWeight('bold');
-  ringkasan.getRange('K2').setFormula(
-    '=IFERROR(QUERY(Rincian!A:J,"select C, D, F, count(I) where I = \'Salah\' ' +
-    'group by C, D, F order by count(I) desc limit 20 ' +
+  ringkasan.getRange('L1').setValue('Soal yang Paling Sering Salah').setFontWeight('bold');
+  ringkasan.getRange('L2').setFormula(
+    '=IFERROR(QUERY(Rincian!A:L,"select L, C, D, F, count(I) where I = \'Salah\' ' +
+    'group by L, C, D, F order by count(I) desc limit 20 ' +
     'label count(I) \'Jumlah Salah\'",1),"Belum ada data")');
 }
 
@@ -103,13 +103,13 @@ function doPost(e) {
       hasil.appendRow([waktu, data.nama, data.kelas, data.mapel, data.topik,
         data.jumlahSoal, data.benar, data.salah, data.nilai,
         Math.round((data.durasiDetik || 0) / 6) / 10, data.idSesi,
-        data.kategoriLabel || 'Materi Pelajaran']);
+        data.kategoriLabel || 'Materi Pelajaran', data.kompetisi || '']);
 
       const rincian = siapkanSheet_(ss, SHEET_RINCIAN, HEADER_RINCIAN);
       const baris = (data.rincian || []).map(function (r, i) {
         return [waktu, data.nama, data.mapel, data.topik, i + 1, r.pertanyaan,
           r.jawabanAnak, r.kunci, r.benar ? 'Benar' : 'Salah', data.idSesi,
-          data.kategoriLabel || 'Materi Pelajaran'];
+          data.kategoriLabel || 'Materi Pelajaran', data.kompetisi || ''];
       });
       if (baris.length) {
         rincian.getRange(rincian.getLastRow() + 1, 1, baris.length, baris[0].length)
@@ -140,7 +140,7 @@ function doGet(e) {
       .slice(-100)
       .map(function (r) {
         return { waktu: r[0], mapel: r[3], topik: r[4], jumlahSoal: r[5],
-          benar: r[6], nilai: r[8], idSesi: r[10], kategori: r[11] || 'pelajaran' };
+          benar: r[6], nilai: r[8], idSesi: r[10], kategori: r[11] || 'pelajaran', kompetisi: r[12] || '' };
       });
     return json_({ ok: true, riwayat: baris });
   }

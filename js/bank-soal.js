@@ -3,7 +3,8 @@
 // pada Google Sheet — aplikasi akan menggabungkannya otomatis.
 //
 // Kategori per mapel: kategori: 'pelajaran' (bawaan jika dikosongkan) atau 'lomba'.
-// Mapel yang sama boleh muncul di dua kategori (mis. Matematika pelajaran & lomba).
+// Soal lomba diberi nama kompetisinya (kompetisi: 'KSM'), sehingga di aplikasi
+// tersusun Kompetisi → Mapel → Topik. Nama mapel boleh sama dengan mapel pelajaran.
 //
 // Format soal:
 //   { tipe: 'pg', pertanyaan, pilihan: [A, B, C, D], jawaban: 'B', pembahasan }
@@ -402,10 +403,11 @@ Meyakini sifat-sifat Allah membuat kita selalu merasa diawasi (muraqabah) sehing
     ],
   },
 
-  // ===================== PERSIAPAN LOMBA (KSM / OSN) =====================
+  // ===================== PERSIAPAN LOMBA: KSM =====================
   {
-    mapel: 'Matematika Terintegrasi (KSM)',
+    mapel: 'Matematika Terintegrasi',
     kategori: 'lomba',
+    kompetisi: 'KSM',
     ikon: '🧮',
     topik: [
       {
@@ -439,8 +441,9 @@ Meyakini sifat-sifat Allah membuat kita selalu merasa diawasi (muraqabah) sehing
     ],
   },
   {
-    mapel: 'IPA Terintegrasi (KSM)',
+    mapel: 'IPA Terintegrasi',
     kategori: 'lomba',
+    kompetisi: 'KSM',
     ikon: '🧪',
     topik: [
       {
@@ -473,8 +476,9 @@ Meyakini sifat-sifat Allah membuat kita selalu merasa diawasi (muraqabah) sehing
     ],
   },
   {
-    mapel: 'IPS Terintegrasi (KSM)',
+    mapel: 'IPS Terintegrasi',
     kategori: 'lomba',
+    kompetisi: 'KSM',
     ikon: '🧭',
     topik: [
       {
@@ -501,3 +505,10 @@ Meyakini sifat-sifat Allah membuat kita selalu merasa diawasi (muraqabah) sehing
     ],
   },
 ];
+
+window.INFO_KOMPETISI = Object.assign(window.INFO_KOMPETISI || {}, {
+  KSM: {
+    nama: 'Kompetisi Sains Madrasah',
+    keterangan: 'Jenjang MTs. Soal terintegrasi: konsep sains/sosial dipadukan dengan nilai keislaman.',
+  },
+});

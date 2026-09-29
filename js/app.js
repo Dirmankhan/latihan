@@ -3,10 +3,10 @@
 
   const CFG = window.LMS_CONFIG || {};
   const HURUF = ['A', 'B', 'C', 'D', 'E'];
-  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab' };
+  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab', kompetisi: 'lms_kompetisi' };
   const KATEGORI = {
     pelajaran: { label: 'Materi Pelajaran', ikon: '📘', ajakan: 'Pelajari materi sekolah dan latih pemahamanmu.' },
-    lomba: { label: 'Persiapan Lomba', ikon: '🏆', ajakan: 'Soal tingkat lanjut untuk persiapan KSM/OSN. Semangat, calon juara!' },
+    lomba: { label: 'Persiapan Lomba', ikon: '🏆', ajakan: 'Latihan soal per kompetisi (KMSI, KSM, dan lainnya). Semangat, calon juara!' },
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -27,7 +27,7 @@
     },
   };
 
-  const state = { profil: simpan.get(KUNCI.profil, null), bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran') };
+  const state = { profil: simpan.get(KUNCI.profil, null), bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran'), kompetisi: simpan.get(KUNCI.kompetisi, '') };
 
   // ---------- Utilitas ----------
   function esc(s) {
@@ -54,7 +54,10 @@
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) +
       ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   }
-  function idTopik(kategori, mapel, topik) { return (kategori || 'pelajaran') + '::' + mapel + '::' + topik; }
+  function idTopik(kategori, kompetisi, mapel, topik) { return [kategori || 'pelajaran', kompetisi || '', mapel, topik].join('::'); }
+  // Nama mapel lengkap untuk tampilan, mis. "KMSI 2026 · Matematika".
+  function judulMapel(kompetisi, mapel) { return kompetisi ? kompetisi + ' · ' + mapel : mapel; }
+  function infoKompetisi(nama) { return (window.INFO_KOMPETISI || {})[nama] || {}; }
   // "lomba", "Persiapan Lomba", "KSM", "OSN" → lomba; selain itu → pelajaran.
   function kodeKategori(k) { return /lomba|ksm|osn|olimpiade/.test(normal(k)) ? 'lomba' : 'pelajaran'; }
   function idSesiBaru() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -83,14 +86,23 @@
   // ---------- Bank soal: bawaan + dari Google Sheet ----------
   function gabungBank(dariSheet) {
     const bank = JSON.parse(JSON.stringify(window.BANK_SOAL || []));
-    bank.forEach((m) => (m.kategori = kodeKategori(m.kategori)));
-    const cariMapel = (nama, kategori) => {
-      let m = bank.find((x) => normal(x.mapel) === normal(nama) && x.kategori === kategori);
-      if (!m) { m = { mapel: String(nama), kategori, ikon: kategori === 'lomba' ? '🏆' : '📘', topik: [] }; bank.push(m); }
+    bank.forEach((m) => {
+      m.kompetisi = m.kompetisi ? String(m.kompetisi) : '';
+      m.kategori = m.kompetisi ? 'lomba' : kodeKategori(m.kategori);
+    });
+    const cariMapel = (nama, kategori, kompetisi) => {
+      let m = bank.find((x) => normal(x.mapel) === normal(nama) && x.kategori === kategori && normal(x.kompetisi) === normal(kompetisi));
+      if (!m) {
+        // Samakan penulisan nama kompetisi dengan yang sudah ada (mis. "kmsi 2026" → "KMSI 2026").
+        const ada = bank.find((x) => normal(x.kompetisi) === normal(kompetisi));
+        m = { mapel: String(nama), kategori, kompetisi: ada ? ada.kompetisi : String(kompetisi || ''), ikon: kategori === 'lomba' ? '🏆' : '📘', topik: [] };
+        bank.push(m);
+      }
       return m;
     };
-    const cariTopik = (mapel, nama, kelas, kategori) => {
-      const m = cariMapel(mapel, kodeKategori(kategori));
+    const cariTopik = (mapel, nama, kelas, kategori, kompetisi) => {
+      kompetisi = String(kompetisi ?? '').trim();
+      const m = cariMapel(mapel, kompetisi ? 'lomba' : kodeKategori(kategori), kompetisi);
       let t = m.topik.find((x) => normal(x.nama) === normal(nama));
       if (!t) { t = { nama: String(nama), kelas: String(kelas || ''), materi: '', soal: [] }; m.topik.push(t); }
       return t;
@@ -98,18 +110,25 @@
     if (dariSheet) {
       (dariSheet.materi || []).forEach((r) => {
         if (!r[0] || !r[1]) return;
-        cariTopik(r[0], r[1], r[2], r[4]).materi = String(r[3] || '');
+        cariTopik(r[0], r[1], r[2], r[4], r[5]).materi = String(r[3] || '');
       });
       (dariSheet.soal || []).forEach((r) => {
-        const [mapel, topik, kelas, tipe, pertanyaan, a, b, c, d, jawaban, pembahasan, kategori] = r;
+        const [mapel, topik, kelas, tipe, pertanyaan, a, b, c, d, jawaban, pembahasan, kategori, kompetisi] = r;
         if (!mapel || !topik || !pertanyaan) return;
-        const t = cariTopik(mapel, topik, kelas, kategori);
+        const t = cariTopik(mapel, topik, kelas, kategori, kompetisi);
         const jenis = normal(tipe) === 'isian' ? 'isian' : 'pg';
         const soal = { tipe: jenis, pertanyaan: String(pertanyaan), jawaban: String(jawaban ?? '').trim(), pembahasan: String(pembahasan || '') };
         if (jenis === 'pg') soal.pilihan = [a, b, c, d].map((x) => String(x ?? '')).filter((x) => x !== '');
         t.soal.push(soal);
       });
     }
+    // Topik simulasi berisi semua soal dari topik lain pada mapel yang sama,
+    // termasuk soal tambahan dari Google Sheet.
+    bank.forEach((m) => m.topik.filter((t) => t.simulasi).forEach((t) => {
+      const sudah = new Set();
+      t.soal = m.topik.filter((x) => !x.simulasi).flatMap((x) => x.soal)
+        .filter((q) => !sudah.has(q.pertanyaan) && sudah.add(q.pertanyaan));
+    }));
     return bank.filter((m) => m.topik.some((t) => t.soal.length || t.materi));
   }
 
@@ -128,7 +147,7 @@
   }
 
   function cariTopik(id) {
-    for (const m of state.bank) for (const t of m.topik) if (idTopik(m.kategori, m.mapel, t.nama) === id) return { mapel: m, topik: t };
+    for (const m of state.bank) for (const t of m.topik) if (idTopik(m.kategori, m.kompetisi, m.mapel, t.nama) === id) return { mapel: m, topik: t };
     return null;
   }
 
@@ -197,10 +216,11 @@
   // ---------- Beranda ----------
   function statistik() {
     const semua = simpan.get(KUNCI.riwayat, []).filter((r) => r.nama === state.profil.nama);
-    const riwayat = semua.filter((r) => kodeKategori(r.kategori) === state.tab);
+    const riwayat = semua.filter((r) => kodeKategori(r.kategori) === state.tab &&
+      (state.tab !== 'lomba' || !kompetisiAktif() || normal(r.kompetisi) === normal(kompetisiAktif())));
     const terbaik = {};
     riwayat.forEach((r) => {
-      const id = idTopik(kodeKategori(r.kategori), r.mapel, r.topik);
+      const id = idTopik(kodeKategori(r.kategori), r.kompetisi, r.mapel, r.topik);
       terbaik[id] = Math.max(terbaik[id] ?? 0, r.nilai);
     });
     const hari = new Set(semua.map((r) => new Date(r.waktu).toDateString()));
@@ -210,6 +230,12 @@
     while (hari.has(d.toDateString())) { beruntun++; d.setDate(d.getDate() - 1); }
     const rata = riwayat.length ? Math.round(riwayat.reduce((s, r) => s + r.nilai, 0) / riwayat.length) : 0;
     return { riwayat, terbaik, beruntun, rata };
+  }
+
+  // Kompetisi yang dipilih di tab Lomba ('' = semua); diabaikan jika sudah tidak ada.
+  function kompetisiAktif() {
+    const ada = state.bank.some((m) => m.kategori === 'lomba' && m.kompetisi === state.kompetisi);
+    return ada ? state.kompetisi : '';
   }
 
   function renderBeranda() {
@@ -233,6 +259,17 @@
     });
     $('#teks-kategori').textContent = KATEGORI[state.tab].ajakan;
 
+    // Filter kompetisi (hanya di tab Lomba).
+    const saring = $('#filter-kompetisi');
+    const daftarKompetisi = [...new Set(state.bank.filter((m) => m.kategori === 'lomba').map((m) => m.kompetisi || 'Lainnya'))];
+    saring.innerHTML = '';
+    saring.hidden = state.tab !== 'lomba' || daftarKompetisi.length < 2;
+    ['', ...daftarKompetisi].forEach((k) => {
+      const b = el('button', { type: 'button', class: 'chip-pilih' + (kompetisiAktif() === k ? ' aktif' : '') }, esc(k || 'Semua kompetisi'));
+      b.onclick = () => { state.kompetisi = k; simpan.set(KUNCI.kompetisi, k); renderBeranda(); };
+      saring.appendChild(b);
+    });
+
     const tuntas = Object.values(st.terbaik).filter((n) => n >= CFG.KKTP).length;
     $('#stats').innerHTML = [
       [st.riwayat.length, 'Latihan selesai'],
@@ -243,18 +280,26 @@
 
     const wadah = $('#daftar-mapel');
     wadah.innerHTML = '';
-    const daftar = state.bank.filter((m) => m.kategori === state.tab);
+    const daftar = state.bank.filter((m) => m.kategori === state.tab &&
+      (state.tab !== 'lomba' || !kompetisiAktif() || m.kompetisi === kompetisiAktif()));
     if (!daftar.length) {
       wadah.innerHTML = `<div class="card kosong">Belum ada materi ${esc(KATEGORI[state.tab].label.toLowerCase())}. Tambahkan soal di sheet "BankSoal" (kolom Kategori: ${state.tab}).</div>`;
       return;
     }
-    daftar.forEach((m) => {
+    let kompetisiTerakhir = null;
+    daftar.slice().sort((a, b) => (a.kompetisi > b.kompetisi) - (a.kompetisi < b.kompetisi)).forEach((m) => {
+      if (state.tab === 'lomba' && m.kompetisi !== kompetisiTerakhir) {
+        kompetisiTerakhir = m.kompetisi;
+        const info = infoKompetisi(m.kompetisi);
+        wadah.appendChild(el('div', { class: 'kompetisi-kepala' },
+          `<h2>🏆 ${esc(m.kompetisi || 'Lomba lainnya')}</h2>${info.nama ? `<p><b>${esc(info.nama)}</b></p>` : ''}${info.keterangan ? `<p class="muted small">${esc(info.keterangan)}</p>` : ''}`));
+      }
       const sec = el('div', { class: 'mapel' });
       sec.appendChild(el('h2', {}, `${esc(m.ikon || '📘')} ${esc(m.mapel)}`));
       const grid = el('div', { class: 'topik-grid' });
       const urut = m.topik.slice().sort((a, b) => (String(a.kelas) === p.kelas ? -1 : 0) - (String(b.kelas) === p.kelas ? -1 : 0));
       urut.forEach((t) => {
-        const id = idTopik(m.kategori, m.mapel, t.nama);
+        const id = idTopik(m.kategori, m.kompetisi, m.mapel, t.nama);
         const nilai = st.terbaik[id];
         const badge = nilai === undefined ? '<span class="badge baru">Belum dicoba</span>'
           : nilai >= CFG.KKTP ? `<span class="badge tuntas">Tuntas · ${nilai}</span>`
@@ -287,7 +332,7 @@
     const x = cariTopik(id);
     if (!x) return;
     state.topikAktif = id;
-    $('#materi-mapel').textContent = `${KATEGORI[x.mapel.kategori].ikon} ${KATEGORI[x.mapel.kategori].label} · ${x.mapel.mapel}`;
+    $('#materi-mapel').textContent = `${KATEGORI[x.mapel.kategori].ikon} ${x.mapel.kompetisi ? '' : KATEGORI[x.mapel.kategori].label + ' · '}${judulMapel(x.mapel.kompetisi, x.mapel.mapel)}`;
     $('#materi-judul').textContent = x.topik.nama;
     $('#materi-isi').innerHTML = renderMateri(x.topik.materi || 'Belum ada materi untuk topik ini.');
     $('#btn-mulai-dari-materi').hidden = !x.topik.soal.length;
@@ -308,7 +353,7 @@
     state.topikAktif = id;
     const sumber = daftarSoal || acak(x.topik.soal).slice(0, x.topik.soalPerSesi || CFG.SOAL_PER_SESI || 10);
     state.sesi = {
-      idSesi: idSesiBaru(), kategori: x.mapel.kategori, mapel: x.mapel.mapel, topik: x.topik.nama,
+      idSesi: idSesiBaru(), kategori: x.mapel.kategori, kompetisi: x.mapel.kompetisi, mapel: x.mapel.mapel, topik: x.topik.nama,
       soal: sumber.map(siapkanSoal), jawaban: [], indeks: 0, mulai: Date.now(), selesai: false,
     };
     tampil('kuis');
@@ -335,7 +380,7 @@
     const s = state.sesi;
     const soal = s.soal[s.indeks];
     const total = s.soal.length;
-    $('#kuis-info').textContent = `${KATEGORI[s.kategori].ikon} ${s.mapel} · ${s.topik} — Soal ${s.indeks + 1} dari ${total}`;
+    $('#kuis-info').textContent = `${KATEGORI[s.kategori].ikon} ${judulMapel(s.kompetisi, s.mapel)} · ${s.topik} — Soal ${s.indeks + 1} dari ${total}`;
     $('#kuis-progress').style.width = (s.jawaban.filter((_, i) => terjawab(i)).length / total * 100) + '%';
 
     const nomor = $('#kuis-nomor');
@@ -399,7 +444,7 @@
     const benar = rincian.filter((r) => r.benar).length;
     const hasil = {
       idSesi: s.idSesi, waktu: new Date().toISOString(), nama: state.profil.nama, kelas: state.profil.kelas,
-      kategori: s.kategori, kategoriLabel: KATEGORI[s.kategori].label, mapel: s.mapel, topik: s.topik, jumlahSoal: s.soal.length, benar, salah: s.soal.length - benar,
+      kategori: s.kategori, kategoriLabel: KATEGORI[s.kategori].label, kompetisi: s.kompetisi || '', mapel: s.mapel, topik: s.topik, jumlahSoal: s.soal.length, benar, salah: s.soal.length - benar,
       nilai: Math.round(benar / s.soal.length * 100), durasiDetik: Math.round((Date.now() - s.mulai) / 1000), rincian,
     };
 
@@ -450,7 +495,7 @@
       $('#riwayat-sumber').textContent = sumber;
       if (!data.length) { isi.innerHTML = '<tr><td colspan="5" class="kosong">Belum ada latihan.</td></tr>'; return; }
       isi.innerHTML = data.slice().reverse().map((r) => `<tr>
-        <td>${formatTanggal(r.waktu)}</td><td>${KATEGORI[kodeKategori(r.kategori)].ikon} ${esc(r.mapel)}</td><td>${esc(r.topik)}</td>
+        <td>${formatTanggal(r.waktu)}</td><td>${KATEGORI[kodeKategori(r.kategori)].ikon} ${esc(judulMapel(r.kompetisi, r.mapel))}</td><td>${esc(r.topik)}</td>
         <td>${esc(r.benar)}/${esc(r.jumlahSoal)}</td>
         <td><span class="badge ${Number(r.nilai) >= CFG.KKTP ? 'tuntas' : 'belum'}">${esc(r.nilai)}</span></td></tr>`).join('');
     };
