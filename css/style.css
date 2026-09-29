@@ -89,6 +89,15 @@ form .btn { width: 100%; margin-top: 8px; }
 .aksi.center { justify-content: center; }
 
 .sapaan { margin-bottom: 14px; }
+.tabs { display: flex; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 5px; }
+.tab {
+  flex: 1; padding: 10px 8px; border: 0; border-radius: 9px; background: none; cursor: pointer;
+  font-weight: 600; color: var(--muted);
+}
+.tab.aktif { background: var(--primary); color: #fff; }
+.tab .jumlah { font-size: .75rem; padding: 1px 7px; border-radius: 99px; background: var(--line); color: var(--text); margin-left: 2px; }
+.tab.aktif .jumlah { background: rgba(255,255,255,.25); color: #fff; }
+#teks-kategori { margin: 10px 2px 14px; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 22px; }
 .stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
 .stat b { display: block; font-size: 1.5rem; }

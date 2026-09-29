@@ -4,7 +4,18 @@ Aplikasi web sederhana untuk **membaca materi** dan **latihan soal**. Setiap has
 latihan otomatis tercatat di **Google Sheet**, sehingga orang tua bisa memantau
 perkembangan belajar dari HP atau laptop.
 
-## Isi Bawaan: Kelas 7 (1 MTs) — Semester 1
+## Dua Kategori Materi
+
+Beranda memiliki dua tab:
+
+- **📘 Materi Pelajaran**: materi dan latihan sesuai pelajaran di madrasah
+- **🏆 Persiapan Lomba**: soal tingkat lanjut untuk KSM (Kompetisi Sains Madrasah) atau OSN
+
+Statistik di beranda dihitung per kategori. Di Google Sheet, setiap hasil latihan
+juga dicatat kategorinya (kolom **Kategori** pada sheet Hasil dan Rincian), dan sheet
+**Ringkasan** merekap nilai per kategori.
+
+## Isi Bawaan: Materi Pelajaran Kelas 7 (1 MTs), Semester 1
 
 | Mapel | Topik | Soal |
 |---|---|---|
@@ -21,6 +32,14 @@ perkembangan belajar dari HP atau laptop.
 
 Mengacu pada Kurikulum Merdeka kelas 7 dan mapel PAI/Bahasa Arab madrasah (KMA 347/2022).
 Sesuaikan dengan urutan materi di madrasah anak Anda melalui sheet **BankSoal**.
+
+## Isi Bawaan: Persiapan Lomba (format KSM MTs)
+
+| Mapel | Topik | Soal |
+|---|---|---|
+| Matematika Terintegrasi (KSM) | Teori Bilangan dan Pola | 11 |
+| IPA Terintegrasi (KSM) | Sains dalam Al-Qur'an | 9 |
+| IPS Terintegrasi (KSM) | Geografi, Sejarah, dan Ekonomi Islam | 8 |
 
 ## Fitur
 
@@ -73,15 +92,16 @@ agar terasa seperti aplikasi.
 
 **Cara termudah — lewat Google Sheet** (tanpa mengubah kode). Sheet **BankSoal**:
 
-| Mapel | Topik | Kelas | Tipe (pg/isian) | Pertanyaan | A | B | C | D | Jawaban | Pembahasan |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Matematika | Perkalian | 3 | pg | 7 × 8 = ... | 54 | 56 | 58 | 64 | B | 7 × 8 = 56 |
-| IPAS | Tumbuhan | 4 | isian | Proses tumbuhan membuat makanan disebut ... | | | | | fotosintesis | |
+| Mapel | Topik | Kelas | Tipe (pg/isian) | Pertanyaan | A | B | C | D | Jawaban | Pembahasan | Kategori |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Matematika | Bilangan Bulat | 7 | pg | −3 × 4 = ... | −12 | 12 | −7 | 1 | A | Tanda berbeda → negatif | pelajaran |
+| IPA Terintegrasi (KSM) | Ekosistem | 7 | isian | Hewan yang namanya menjadi nama surah ke-16 adalah ... | | | | | lebah | QS. An-Nahl = lebah | lomba |
 
+- Kolom **Kategori**: isi `pelajaran` atau `lomba`. Jika dikosongkan, dianggap `pelajaran`.
 - Tipe `pg`: kolom Jawaban diisi huruf (A/B/C/D).
 - Tipe `isian`: kolom Jawaban diisi teks. Beberapa jawaban benar dipisah `|`,
   misalnya `63|enam puluh tiga`. Huruf besar/kecil tidak berpengaruh.
-- Sheet **Materi**: kolom Mapel, Topik, Kelas, Materi. Di teks materi, baris kosong
+- Sheet **Materi**: kolom Mapel, Topik, Kelas, Materi, Kategori. Di teks materi, baris kosong
   = paragraf baru, awali baris dengan `- ` untuk daftar, `**teks**` untuk tebal.
 
 Soal bawaan juga bisa diubah di [`js/bank-soal.js`](js/bank-soal.js).

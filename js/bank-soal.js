@@ -2,6 +2,9 @@
 // Soal tambahan bisa ditulis langsung di sheet "BankSoal" dan "Materi"
 // pada Google Sheet — aplikasi akan menggabungkannya otomatis.
 //
+// Kategori per mapel: kategori: 'pelajaran' (bawaan jika dikosongkan) atau 'lomba'.
+// Mapel yang sama boleh muncul di dua kategori (mis. Matematika pelajaran & lomba).
+//
 // Format soal:
 //   { tipe: 'pg', pertanyaan, pilihan: [A, B, C, D], jawaban: 'B', pembahasan }
 //   { tipe: 'isian', pertanyaan, jawaban: '63', pembahasan }  // beberapa kunci: '63|enam puluh tiga'
@@ -10,6 +13,7 @@
 window.BANK_SOAL = [
   {
     mapel: 'Matematika',
+    kategori: 'pelajaran',
     ikon: '🔢',
     topik: [
       {
@@ -64,6 +68,7 @@ Tips: pada perbandingan berbalik nilai, hasil kali kedua besaran selalu tetap (6
   },
   {
     mapel: 'IPA',
+    kategori: 'pelajaran',
     ikon: '🔬',
     topik: [
       {
@@ -132,6 +137,7 @@ Dalam percobaan: **variabel bebas** sengaja diubah, **variabel terikat** diamati
   },
   {
     mapel: 'IPS',
+    kategori: 'pelajaran',
     ikon: '🌏',
     topik: [
       {
@@ -162,6 +168,7 @@ Dalam percobaan: **variabel bebas** sengaja diubah, **variabel terikat** diamati
   },
   {
     mapel: 'Bahasa Indonesia',
+    kategori: 'pelajaran',
     ikon: '📖',
     topik: [
       {
@@ -195,6 +202,7 @@ Contoh: "Pasir Pantai Kuta Mandalika berbutir besar seperti merica. Suara ombakn
   },
   {
     mapel: 'Bahasa Inggris',
+    kategori: 'pelajaran',
     ikon: '🇬🇧',
     topik: [
       {
@@ -230,6 +238,7 @@ Contoh: "Pasir Pantai Kuta Mandalika berbutir besar seperti merica. Suara ombakn
   },
   {
     mapel: 'Al-Qur\'an Hadis',
+    kategori: 'pelajaran',
     ikon: '📗',
     topik: [
       {
@@ -257,6 +266,7 @@ Contoh: "Pasir Pantai Kuta Mandalika berbutir besar seperti merica. Suara ombakn
   },
   {
     mapel: 'Akidah Akhlak',
+    kategori: 'pelajaran',
     ikon: '🤲',
     topik: [
       {
@@ -291,6 +301,7 @@ Meyakini sifat-sifat Allah membuat kita selalu merasa diawasi (muraqabah) sehing
   },
   {
     mapel: 'Fikih',
+    kategori: 'pelajaran',
     ikon: '💧',
     topik: [
       {
@@ -326,6 +337,7 @@ Meyakini sifat-sifat Allah membuat kita selalu merasa diawasi (muraqabah) sehing
   },
   {
     mapel: 'Sejarah Kebudayaan Islam',
+    kategori: 'pelajaran',
     ikon: '🕌',
     topik: [
       {
@@ -357,6 +369,7 @@ Meyakini sifat-sifat Allah membuat kita selalu merasa diawasi (muraqabah) sehing
   },
   {
     mapel: 'Bahasa Arab',
+    kategori: 'pelajaran',
     ikon: '🗣️',
     topik: [
       {
@@ -384,6 +397,105 @@ Meyakini sifat-sifat Allah membuat kita selalu merasa diawasi (muraqabah) sehing
           { tipe: 'pg', pertanyaan: 'Kata مُدَرِّسٌ artinya ...', pilihan: ['siswa', 'guru laki-laki', 'sekolah', 'kelas'], jawaban: 'B', pembahasan: 'مُدَرِّسٌ = guru laki-laki; مُدَرِّسَةٌ = guru perempuan.' },
           { tipe: 'pg', pertanyaan: 'Untuk menanyakan tempat tinggal teman laki-laki, kita bertanya ...', pilihan: ['مَا اسْمُكَ؟', 'أَيْنَ تَسْكُنُ؟', 'كَيْفَ حَالُكَ؟', 'مَنْ أَنْتَ؟'], jawaban: 'B', pembahasan: 'أَيْنَ = di mana, تَسْكُنُ = kamu tinggal.' },
           { tipe: 'pg', pertanyaan: 'Kata ganti أَنْتِ digunakan untuk ...', pilihan: ['saya', 'kamu (laki-laki)', 'kamu (perempuan)', 'dia (laki-laki)'], jawaban: 'C', pembahasan: 'أَنْتِ (berharakat kasrah) untuk kamu perempuan; أَنْتَ (fathah) untuk kamu laki-laki.' },
+        ],
+      },
+    ],
+  },
+
+  // ===================== PERSIAPAN LOMBA (KSM / OSN) =====================
+  {
+    mapel: 'Matematika Terintegrasi (KSM)',
+    kategori: 'lomba',
+    ikon: '🧮',
+    topik: [
+      {
+        nama: 'Teori Bilangan dan Pola',
+        kelas: '7',
+        materi: `Soal **KSM Matematika Terintegrasi** menggabungkan konsep matematika dengan konteks keislaman (ibadah, zakat, Al-Qur'an). Kuncinya: pahami konteksnya, lalu terjemahkan menjadi model matematika.
+
+**Konsep yang sering keluar:**
+- **Angka satuan perpangkatan** berulang dengan pola. Contoh 7ⁿ: 7, 9, 3, 1, 7, 9, ... (periode 4). Cari sisa n : 4
+- **Barisan aritmetika**: Uₙ = a + (n − 1)b; jumlah Sₙ = n/2 × (a + Uₙ)
+- **Jumlah 1 + 2 + ... + n** = n(n + 1)/2
+- **Banyak faktor**: jika n = p^a × q^b maka banyak faktornya (a + 1)(b + 1)
+- **Prinsip inklusi-eksklusi**: |A ∪ B| = |A| + |B| − |A ∩ B|
+- **Zakat mal** = 2,5% dari harta yang telah mencapai nisab dan haul
+
+**Tips lomba:** kerjakan soal yang paling yakin dulu, tulis langkah singkat di kertas buram, dan periksa kembali satuan jawaban.`,
+        soal: [
+          { tipe: 'pg', pertanyaan: 'Angka satuan dari 7²⁰²⁶ adalah ...', pilihan: ['1', '3', '7', '9'], jawaban: 'D', pembahasan: 'Angka satuan 7ⁿ berulang: 7, 9, 3, 1 (periode 4). 2026 : 4 bersisa 2, jadi angka satuannya sama dengan 7² → 9.' },
+          { tipe: 'isian', pertanyaan: 'Banyak bilangan bulat dari 1 sampai 100 yang habis dibagi 3 atau 5 adalah ...', jawaban: '47', pembahasan: 'Habis dibagi 3: 33. Habis dibagi 5: 20. Habis dibagi 15: 6. Jadi 33 + 20 − 6 = 47.' },
+          { tipe: 'isian', pertanyaan: 'Hasil dari 1 + 2 + 3 + ... + 100 adalah ...', jawaban: '5050|5.050', pembahasan: 'n(n + 1)/2 = 100 × 101 : 2 = 5.050.' },
+          { tipe: 'pg', pertanyaan: 'Suku ke-20 dari barisan 3, 7, 11, 15, ... adalah ...', pilihan: ['75', '79', '83', '80'], jawaban: 'B', pembahasan: 'a = 3, b = 4. U₂₀ = 3 + 19 × 4 = 3 + 76 = 79.' },
+          { tipe: 'pg', pertanyaan: 'Jumlah rakaat salat fardu dalam sehari adalah 17. Jumlah rakaat salat fardu yang dikerjakan seorang muslim selama 1 minggu adalah ...', pilihan: ['102', '112', '119', '124'], jawaban: 'C', pembahasan: '17 rakaat × 7 hari = 119 rakaat.' },
+          { tipe: 'pg', pertanyaan: 'Pak Hasan memiliki tabungan Rp100.000.000 yang sudah mencapai nisab dan haul. Zakat mal yang wajib dikeluarkan sebesar 2,5% adalah ...', pilihan: ['Rp250.000', 'Rp2.500.000', 'Rp25.000.000', 'Rp10.000.000'], jawaban: 'B', pembahasan: '2,5% × 100.000.000 = 2,5/100 × 100.000.000 = Rp2.500.000.' },
+          { tipe: 'isian', pertanyaan: 'FPB dari 84 dan 126 adalah ...', jawaban: '42', pembahasan: '84 = 2² × 3 × 7 dan 126 = 2 × 3² × 7. FPB = 2 × 3 × 7 = 42.' },
+          { tipe: 'pg', pertanyaan: 'Banyak faktor positif dari 36 adalah ...', pilihan: ['6', '8', '9', '12'], jawaban: 'C', pembahasan: '36 = 2² × 3². Banyak faktor = (2 + 1)(2 + 1) = 9, yaitu 1, 2, 3, 4, 6, 9, 12, 18, 36.' },
+          { tipe: 'pg', pertanyaan: 'Al-Qur\'an terdiri atas 30 juz. Jika Ahmad mampu menghafal 2 juz setiap 3 bulan, waktu yang dibutuhkan untuk menghafal seluruh Al-Qur\'an adalah ... bulan.', pilihan: ['30', '40', '45', '60'], jawaban: 'C', pembahasan: 'Perbandingan senilai: 30 juz : 2 juz = 15 kali. 15 × 3 bulan = 45 bulan.' },
+          { tipe: 'isian', pertanyaan: 'Sisa pembagian 2¹⁰ oleh 7 adalah ...', jawaban: '2', pembahasan: '2¹⁰ = 1.024. 7 × 146 = 1.022, sisa 1.024 − 1.022 = 2.' },
+          { tipe: 'pg', pertanyaan: 'Rata-rata 5 bilangan adalah 12. Jika ditambah satu bilangan, rata-ratanya menjadi 13. Bilangan yang ditambahkan adalah ...', pilihan: ['13', '15', '18', '20'], jawaban: 'C', pembahasan: 'Jumlah awal 5 × 12 = 60. Jumlah baru 6 × 13 = 78. Bilangan tambahan = 78 − 60 = 18.' },
+        ],
+      },
+    ],
+  },
+  {
+    mapel: 'IPA Terintegrasi (KSM)',
+    kategori: 'lomba',
+    ikon: '🧪',
+    topik: [
+      {
+        nama: 'Sains dalam Al-Qur\'an',
+        kelas: '7',
+        materi: `Soal **KSM IPA Terintegrasi** mengaitkan konsep sains dengan ayat Al-Qur'an. Hafalkan beberapa surah bernama makhluk hidup/benda dan kaitkan dengan konsep IPA-nya.
+
+- **QS. Al-Anbiya' ayat 30**: segala sesuatu yang hidup dijadikan dari air → air penyusun utama tubuh makhluk hidup (±60% tubuh manusia dewasa)
+- **QS. An-Nahl (lebah)**: lebah menghasilkan madu; lebah dan bunga bersimbiosis **mutualisme** (lebah dapat nektar, bunga terbantu penyerbukan)
+- **QS. Al-Hadid (besi)**: besi, lambang unsur **Fe**
+- **QS. An-Naml (semut)**: semut termasuk **serangga** (Insecta), berkaki 6
+- **QS. Al-'Ankabut (laba-laba)**: laba-laba termasuk **Arachnida**, berkaki 8
+
+**Rumus penting:**
+- Konversi suhu: °F = (9/5 × °C) + 32; K = °C + 273
+- Massa jenis ρ = m/V; benda **terapung** jika ρ benda < ρ air (1 g/cm³)
+- Pemuaian: rel kereta api diberi celah agar tidak melengkung saat memuai`,
+        soal: [
+          { tipe: 'pg', pertanyaan: '"Dan Kami jadikan dari air segala sesuatu yang hidup." (QS. Al-Anbiya\': 30). Kandungan air dalam tubuh manusia dewasa kira-kira ...', pilihan: ['10%', '30%', '60%', '95%'], jawaban: 'C', pembahasan: 'Sekitar 60% tubuh manusia dewasa tersusun atas air, sesuai isyarat ayat bahwa kehidupan berasal dari air.' },
+          { tipe: 'pg', pertanyaan: 'Hubungan antara lebah (QS. An-Nahl) dan bunga termasuk simbiosis ...', pilihan: ['parasitisme', 'komensalisme', 'mutualisme', 'amensalisme'], jawaban: 'C', pembahasan: 'Lebah mendapat nektar, bunga terbantu penyerbukannya. Keduanya untung → mutualisme.' },
+          { tipe: 'pg', pertanyaan: 'Salah satu surah dalam Al-Qur\'an bernama Al-Hadid yang berarti besi. Lambang unsur besi adalah ...', pilihan: ['Be', 'Fe', 'Bi', 'Ir'], jawaban: 'B', pembahasan: 'Besi berlambang Fe, dari bahasa Latin ferrum.' },
+          { tipe: 'isian', pertanyaan: 'Suhu 40 °C jika dinyatakan dalam skala Fahrenheit adalah ... °F.', jawaban: '104', pembahasan: '°F = (9/5 × 40) + 32 = 72 + 32 = 104 °F.' },
+          { tipe: 'pg', pertanyaan: 'Sebuah kayu bermassa jenis 0,8 g/cm³ dimasukkan ke dalam air (1 g/cm³). Kayu tersebut akan ...', pilihan: ['tenggelam', 'melayang', 'terapung', 'larut'], jawaban: 'C', pembahasan: 'Massa jenis kayu lebih kecil daripada massa jenis air, sehingga kayu terapung.' },
+          { tipe: 'pg', pertanyaan: 'Hewan yang menjadi nama surah Al-\'Ankabut termasuk kelompok Arachnida. Jumlah kakinya adalah ...', pilihan: ['4', '6', '8', '10'], jawaban: 'C', pembahasan: 'Al-\'Ankabut berarti laba-laba. Laba-laba (Arachnida) memiliki 8 kaki.' },
+          { tipe: 'pg', pertanyaan: 'Semut (QS. An-Naml) termasuk kelompok serangga karena ...', pilihan: ['berkaki 8', 'berkaki 6 dan tubuh terdiri atas 3 bagian', 'tidak memiliki antena', 'bernapas dengan insang'], jawaban: 'B', pembahasan: 'Ciri serangga (Insecta): tubuh terdiri atas kepala, dada, perut dan memiliki 6 kaki.' },
+          { tipe: 'isian', pertanyaan: 'Suhu 27 °C jika dinyatakan dalam kelvin adalah ... K.', jawaban: '300', pembahasan: 'K = °C + 273 = 27 + 273 = 300 K.' },
+          { tipe: 'pg', pertanyaan: 'Sambungan rel kereta api diberi celah. Tujuannya adalah ...', pilihan: ['menghemat besi', 'memberi ruang saat rel memuai', 'agar kereta lebih cepat', 'mengurangi suara'], jawaban: 'B', pembahasan: 'Saat panas, rel memuai. Celah mencegah rel melengkung.' },
+        ],
+      },
+    ],
+  },
+  {
+    mapel: 'IPS Terintegrasi (KSM)',
+    kategori: 'lomba',
+    ikon: '🧭',
+    topik: [
+      {
+        nama: 'Geografi, Sejarah, dan Ekonomi Islam',
+        kelas: '7',
+        materi: `Soal **KSM IPS Terintegrasi** memadukan geografi, sejarah, dan ekonomi dengan nilai-nilai Islam.
+
+- **Waktu dan arah**: Makkah berada di zona GMT+3, sedangkan WITA GMT+8 (selisih 5 jam). Arah kiblat dari Indonesia kurang lebih ke **barat laut**
+- **Sejarah**: hijrah Nabi ke Madinah (622 M) menjadi awal **kalender Hijriah**, ditetapkan pada masa Khalifah Umar bin Khattab
+- **Ekonomi**: kebutuhan primer = sandang, pangan, papan. Pasar = tempat bertemunya penjual dan pembeli. Jual beli sah jika ada penjual, pembeli, barang, dan **ijab kabul**
+- **Zakat, infak, sedekah, wakaf (ZISWAF)** berfungsi memeratakan kesejahteraan dan mengurangi kesenjangan
+- Pontianak adalah kota yang dilalui **garis khatulistiwa** (lintang 0°)`,
+        soal: [
+          { tipe: 'pg', pertanyaan: 'Arah kiblat umat Islam di Indonesia kurang lebih menghadap ke ...', pilihan: ['barat daya', 'barat laut', 'timur laut', 'utara'], jawaban: 'B', pembahasan: 'Makkah terletak di sebelah barat laut Indonesia, sehingga arah kiblat kurang lebih ke barat laut.' },
+          { tipe: 'pg', pertanyaan: 'Makkah berada di zona waktu GMT+3 dan Mataram di zona WITA (GMT+8). Jika di Mataram pukul 17.00 WITA, di Makkah pukul ...', pilihan: ['10.00', '12.00', '14.00', '22.00'], jawaban: 'B', pembahasan: 'Selisih 8 − 3 = 5 jam, Makkah lebih lambat. 17.00 − 5 jam = 12.00.' },
+          { tipe: 'pg', pertanyaan: 'Penanggalan Hijriah dimulai dari peristiwa ...', pilihan: ['kelahiran Nabi Muhammad saw.', 'turunnya wahyu pertama', 'hijrah Nabi ke Madinah', 'Fathu Makkah'], jawaban: 'C', pembahasan: 'Kalender Hijriah dihitung sejak hijrah Nabi ke Madinah (622 M), ditetapkan pada masa Umar bin Khattab.' },
+          { tipe: 'pg', pertanyaan: 'Khalifah yang menetapkan penggunaan kalender Hijriah adalah ...', pilihan: ['Abu Bakar ash-Shiddiq', 'Umar bin Khattab', 'Utsman bin Affan', 'Ali bin Abi Thalib'], jawaban: 'B', pembahasan: 'Kalender Hijriah ditetapkan pada masa Khalifah Umar bin Khattab.' },
+          { tipe: 'pg', pertanyaan: 'Kota di Indonesia yang dilalui garis khatulistiwa adalah ...', pilihan: ['Mataram', 'Pontianak', 'Makassar', 'Surabaya'], jawaban: 'B', pembahasan: 'Pontianak (Kalimantan Barat) dilalui garis lintang 0° dan terdapat Tugu Khatulistiwa.' },
+          { tipe: 'pg', pertanyaan: 'Kebutuhan sandang, pangan, dan papan termasuk kebutuhan ...', pilihan: ['primer', 'sekunder', 'tersier', 'rohani'], jawaban: 'A', pembahasan: 'Sandang (pakaian), pangan (makanan), papan (tempat tinggal) adalah kebutuhan primer.' },
+          { tipe: 'pg', pertanyaan: 'Dalam jual beli menurut Islam, pernyataan serah terima antara penjual dan pembeli disebut ...', pilihan: ['ijab kabul', 'riba', 'khiyar', 'nisab'], jawaban: 'A', pembahasan: 'Ijab (pernyataan penjual) dan kabul (penerimaan pembeli) adalah salah satu rukun jual beli.' },
+          { tipe: 'pg', pertanyaan: 'Fungsi zakat dalam kegiatan ekonomi masyarakat adalah ...', pilihan: ['menambah keuntungan pedagang', 'memeratakan kesejahteraan', 'menaikkan harga barang', 'mengurangi jumlah uang beredar'], jawaban: 'B', pembahasan: 'Zakat menyalurkan sebagian harta orang mampu kepada yang berhak sehingga kesejahteraan lebih merata.' },
         ],
       },
     ],

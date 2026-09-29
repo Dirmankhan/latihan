@@ -3,7 +3,11 @@
 
   const CFG = window.LMS_CONFIG || {};
   const HURUF = ['A', 'B', 'C', 'D', 'E'];
-  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet' };
+  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab' };
+  const KATEGORI = {
+    pelajaran: { label: 'Materi Pelajaran', ikon: '📘', ajakan: 'Pelajari materi sekolah dan latih pemahamanmu.' },
+    lomba: { label: 'Persiapan Lomba', ikon: '🏆', ajakan: 'Soal tingkat lanjut untuk persiapan KSM/OSN. Semangat, calon juara!' },
+  };
 
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, attrs = {}, html = '') => {
@@ -23,7 +27,7 @@
     },
   };
 
-  const state = { profil: simpan.get(KUNCI.profil, null), bank: [], topikAktif: null, sesi: null, timer: null };
+  const state = { profil: simpan.get(KUNCI.profil, null), bank: [], topikAktif: null, sesi: null, timer: null, tab: simpan.get(KUNCI.tab, 'pelajaran') };
 
   // ---------- Utilitas ----------
   function esc(s) {
@@ -50,7 +54,9 @@
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) +
       ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   }
-  function idTopik(mapel, topik) { return mapel + '::' + topik; }
+  function idTopik(kategori, mapel, topik) { return (kategori || 'pelajaran') + '::' + mapel + '::' + topik; }
+  // "lomba", "Persiapan Lomba", "KSM", "OSN" → lomba; selain itu → pelajaran.
+  function kodeKategori(k) { return /lomba|ksm|osn|olimpiade/.test(normal(k)) ? 'lomba' : 'pelajaran'; }
   function idSesiBaru() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
   // Markdown mini: paragraf, daftar "- ", **tebal**.
@@ -77,13 +83,14 @@
   // ---------- Bank soal: bawaan + dari Google Sheet ----------
   function gabungBank(dariSheet) {
     const bank = JSON.parse(JSON.stringify(window.BANK_SOAL || []));
-    const cariMapel = (nama) => {
-      let m = bank.find((x) => normal(x.mapel) === normal(nama));
-      if (!m) { m = { mapel: String(nama), ikon: '📘', topik: [] }; bank.push(m); }
+    bank.forEach((m) => (m.kategori = kodeKategori(m.kategori)));
+    const cariMapel = (nama, kategori) => {
+      let m = bank.find((x) => normal(x.mapel) === normal(nama) && x.kategori === kategori);
+      if (!m) { m = { mapel: String(nama), kategori, ikon: kategori === 'lomba' ? '🏆' : '📘', topik: [] }; bank.push(m); }
       return m;
     };
-    const cariTopik = (mapel, nama, kelas) => {
-      const m = cariMapel(mapel);
+    const cariTopik = (mapel, nama, kelas, kategori) => {
+      const m = cariMapel(mapel, kodeKategori(kategori));
       let t = m.topik.find((x) => normal(x.nama) === normal(nama));
       if (!t) { t = { nama: String(nama), kelas: String(kelas || ''), materi: '', soal: [] }; m.topik.push(t); }
       return t;
@@ -91,12 +98,12 @@
     if (dariSheet) {
       (dariSheet.materi || []).forEach((r) => {
         if (!r[0] || !r[1]) return;
-        cariTopik(r[0], r[1], r[2]).materi = String(r[3] || '');
+        cariTopik(r[0], r[1], r[2], r[4]).materi = String(r[3] || '');
       });
       (dariSheet.soal || []).forEach((r) => {
-        const [mapel, topik, kelas, tipe, pertanyaan, a, b, c, d, jawaban, pembahasan] = r;
+        const [mapel, topik, kelas, tipe, pertanyaan, a, b, c, d, jawaban, pembahasan, kategori] = r;
         if (!mapel || !topik || !pertanyaan) return;
-        const t = cariTopik(mapel, topik, kelas);
+        const t = cariTopik(mapel, topik, kelas, kategori);
         const jenis = normal(tipe) === 'isian' ? 'isian' : 'pg';
         const soal = { tipe: jenis, pertanyaan: String(pertanyaan), jawaban: String(jawaban ?? '').trim(), pembahasan: String(pembahasan || '') };
         if (jenis === 'pg') soal.pilihan = [a, b, c, d].map((x) => String(x ?? '')).filter((x) => x !== '');
@@ -121,7 +128,7 @@
   }
 
   function cariTopik(id) {
-    for (const m of state.bank) for (const t of m.topik) if (idTopik(m.mapel, t.nama) === id) return { mapel: m, topik: t };
+    for (const m of state.bank) for (const t of m.topik) if (idTopik(m.kategori, m.mapel, t.nama) === id) return { mapel: m, topik: t };
     return null;
   }
 
@@ -189,13 +196,14 @@
 
   // ---------- Beranda ----------
   function statistik() {
-    const riwayat = simpan.get(KUNCI.riwayat, []).filter((r) => r.nama === state.profil.nama);
+    const semua = simpan.get(KUNCI.riwayat, []).filter((r) => r.nama === state.profil.nama);
+    const riwayat = semua.filter((r) => kodeKategori(r.kategori) === state.tab);
     const terbaik = {};
     riwayat.forEach((r) => {
-      const id = idTopik(r.mapel, r.topik);
+      const id = idTopik(kodeKategori(r.kategori), r.mapel, r.topik);
       terbaik[id] = Math.max(terbaik[id] ?? 0, r.nilai);
     });
-    const hari = new Set(riwayat.map((r) => new Date(r.waktu).toDateString()));
+    const hari = new Set(semua.map((r) => new Date(r.waktu).toDateString()));
     let beruntun = 0;
     const d = new Date();
     if (!hari.has(d.toDateString())) d.setDate(d.getDate() - 1);
@@ -214,6 +222,17 @@
       'Salah itu wajar, yang penting terus mencoba.', 'Ayo kalahkan nilai terbaikmu sendiri!'];
     $('#teks-motivasi').textContent = motivasi[new Date().getDate() % motivasi.length];
 
+    const tabs = $('#tabs');
+    tabs.innerHTML = '';
+    Object.entries(KATEGORI).forEach(([kode, k]) => {
+      const jumlah = state.bank.filter((m) => m.kategori === kode).reduce((n, m) => n + m.topik.length, 0);
+      const b = el('button', { type: 'button', role: 'tab', class: 'tab' + (state.tab === kode ? ' aktif' : ''), 'aria-selected': String(state.tab === kode) },
+        `${k.ikon} ${k.label} <span class="jumlah">${jumlah}</span>`);
+      b.onclick = () => { state.tab = kode; simpan.set(KUNCI.tab, kode); renderBeranda(); };
+      tabs.appendChild(b);
+    });
+    $('#teks-kategori').textContent = KATEGORI[state.tab].ajakan;
+
     const tuntas = Object.values(st.terbaik).filter((n) => n >= CFG.KKTP).length;
     $('#stats').innerHTML = [
       [st.riwayat.length, 'Latihan selesai'],
@@ -224,17 +243,18 @@
 
     const wadah = $('#daftar-mapel');
     wadah.innerHTML = '';
-    if (!state.bank.length) {
-      wadah.innerHTML = '<div class="card kosong">Belum ada materi. Tambahkan soal di js/bank-soal.js atau sheet "BankSoal".</div>';
+    const daftar = state.bank.filter((m) => m.kategori === state.tab);
+    if (!daftar.length) {
+      wadah.innerHTML = `<div class="card kosong">Belum ada materi ${esc(KATEGORI[state.tab].label.toLowerCase())}. Tambahkan soal di sheet "BankSoal" (kolom Kategori: ${state.tab}).</div>`;
       return;
     }
-    state.bank.forEach((m) => {
+    daftar.forEach((m) => {
       const sec = el('div', { class: 'mapel' });
       sec.appendChild(el('h2', {}, `${esc(m.ikon || '📘')} ${esc(m.mapel)}`));
       const grid = el('div', { class: 'topik-grid' });
       const urut = m.topik.slice().sort((a, b) => (String(a.kelas) === p.kelas ? -1 : 0) - (String(b.kelas) === p.kelas ? -1 : 0));
       urut.forEach((t) => {
-        const id = idTopik(m.mapel, t.nama);
+        const id = idTopik(m.kategori, m.mapel, t.nama);
         const nilai = st.terbaik[id];
         const badge = nilai === undefined ? '<span class="badge baru">Belum dicoba</span>'
           : nilai >= CFG.KKTP ? `<span class="badge tuntas">Tuntas · ${nilai}</span>`
@@ -267,7 +287,7 @@
     const x = cariTopik(id);
     if (!x) return;
     state.topikAktif = id;
-    $('#materi-mapel').textContent = x.mapel.mapel;
+    $('#materi-mapel').textContent = `${KATEGORI[x.mapel.kategori].ikon} ${KATEGORI[x.mapel.kategori].label} · ${x.mapel.mapel}`;
     $('#materi-judul').textContent = x.topik.nama;
     $('#materi-isi').innerHTML = renderMateri(x.topik.materi || 'Belum ada materi untuk topik ini.');
     $('#btn-mulai-dari-materi').hidden = !x.topik.soal.length;
@@ -288,7 +308,7 @@
     state.topikAktif = id;
     const sumber = daftarSoal || acak(x.topik.soal).slice(0, CFG.SOAL_PER_SESI || 10);
     state.sesi = {
-      idSesi: idSesiBaru(), mapel: x.mapel.mapel, topik: x.topik.nama,
+      idSesi: idSesiBaru(), kategori: x.mapel.kategori, mapel: x.mapel.mapel, topik: x.topik.nama,
       soal: sumber.map(siapkanSoal), jawaban: [], indeks: 0, mulai: Date.now(), selesai: false,
     };
     tampil('kuis');
@@ -315,7 +335,7 @@
     const s = state.sesi;
     const soal = s.soal[s.indeks];
     const total = s.soal.length;
-    $('#kuis-info').textContent = `${s.mapel} · ${s.topik} — Soal ${s.indeks + 1} dari ${total}`;
+    $('#kuis-info').textContent = `${KATEGORI[s.kategori].ikon} ${s.mapel} · ${s.topik} — Soal ${s.indeks + 1} dari ${total}`;
     $('#kuis-progress').style.width = (s.jawaban.filter((_, i) => terjawab(i)).length / total * 100) + '%';
 
     const nomor = $('#kuis-nomor');
@@ -375,7 +395,7 @@
     const benar = rincian.filter((r) => r.benar).length;
     const hasil = {
       idSesi: s.idSesi, waktu: new Date().toISOString(), nama: state.profil.nama, kelas: state.profil.kelas,
-      mapel: s.mapel, topik: s.topik, jumlahSoal: s.soal.length, benar, salah: s.soal.length - benar,
+      kategori: s.kategori, kategoriLabel: KATEGORI[s.kategori].label, mapel: s.mapel, topik: s.topik, jumlahSoal: s.soal.length, benar, salah: s.soal.length - benar,
       nilai: Math.round(benar / s.soal.length * 100), durasiDetik: Math.round((Date.now() - s.mulai) / 1000), rincian,
     };
 
@@ -426,7 +446,7 @@
       $('#riwayat-sumber').textContent = sumber;
       if (!data.length) { isi.innerHTML = '<tr><td colspan="5" class="kosong">Belum ada latihan.</td></tr>'; return; }
       isi.innerHTML = data.slice().reverse().map((r) => `<tr>
-        <td>${formatTanggal(r.waktu)}</td><td>${esc(r.mapel)}</td><td>${esc(r.topik)}</td>
+        <td>${formatTanggal(r.waktu)}</td><td>${KATEGORI[kodeKategori(r.kategori)].ikon} ${esc(r.mapel)}</td><td>${esc(r.topik)}</td>
         <td>${esc(r.benar)}/${esc(r.jumlahSoal)}</td>
         <td><span class="badge ${Number(r.nilai) >= CFG.KKTP ? 'tuntas' : 'belum'}">${esc(r.nilai)}</span></td></tr>`).join('');
     };
