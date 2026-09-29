@@ -261,7 +261,7 @@
             : `<span class="badge belum">Terbaik ${nilai}</span>`;
         const kartu = el('div', { class: 'topik' }, `
           <h3>${esc(t.nama)}</h3>
-          <div class="meta">${t.kelas ? 'Kelas ' + esc(t.kelas) + ' · ' : ''}${t.soal.length} soal</div>
+          <div class="meta">${t.kelas ? (/^\d/.test(t.kelas) ? 'Kelas ' : '') + esc(t.kelas) + ' · ' : ''}${t.soal.length} soal${t.soalPerSesi ? ' · ' + Math.min(t.soalPerSesi, t.soal.length) + ' soal per sesi' : ''}</div>
           <div>${badge}</div>
           <div class="tombol"></div>`);
         const tombol = kartu.querySelector('.tombol');
@@ -306,7 +306,7 @@
     const x = cariTopik(id);
     if (!x) return;
     state.topikAktif = id;
-    const sumber = daftarSoal || acak(x.topik.soal).slice(0, CFG.SOAL_PER_SESI || 10);
+    const sumber = daftarSoal || acak(x.topik.soal).slice(0, x.topik.soalPerSesi || CFG.SOAL_PER_SESI || 10);
     state.sesi = {
       idSesi: idSesiBaru(), kategori: x.mapel.kategori, mapel: x.mapel.mapel, topik: x.topik.nama,
       soal: sumber.map(siapkanSoal), jawaban: [], indeks: 0, mulai: Date.now(), selesai: false,
@@ -346,7 +346,11 @@
       nomor.appendChild(b);
     });
 
-    $('#kuis-pertanyaan').textContent = soal.pertanyaan;
+    // Soal bacaan: teks sebelum paragraf terakhir ditampilkan sebagai kotak bacaan.
+    const potong = soal.pertanyaan.lastIndexOf('\n\n');
+    $('#kuis-bacaan').hidden = potong === -1;
+    $('#kuis-bacaan').textContent = potong === -1 ? '' : soal.pertanyaan.slice(0, potong);
+    $('#kuis-pertanyaan').textContent = potong === -1 ? soal.pertanyaan : soal.pertanyaan.slice(potong + 2);
     const wadah = $('#kuis-jawaban');
     wadah.innerHTML = '';
     if (soal.tipe === 'isian') {

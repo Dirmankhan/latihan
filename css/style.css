@@ -134,6 +134,10 @@ form .btn { width: 100%; margin-top: 8px; }
 .nomor-soal button.terjawab { background: var(--primary-soft); border-color: var(--primary); }
 .nomor-soal button.aktif { outline: 2px solid var(--primary); }
 .pertanyaan { font-size: 1.2rem; font-weight: 600; white-space: pre-line; }
+.bacaan {
+  white-space: pre-line; background: var(--bg); border: 1px solid var(--line); border-left: 4px solid var(--primary);
+  border-radius: 10px; padding: 12px 14px; margin: 4px 0 12px; font-size: .98rem; line-height: 1.6;
+}
 /* Teks Arab: arah baca otomatis dan huruf lebih besar */
 .pilihan span:last-child, .materi li, .pembahasan .a { unicode-bidi: plaintext; }
 :lang(ar), .arab { font-size: 1.25em; }

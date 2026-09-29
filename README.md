@@ -41,6 +41,22 @@ Sesuaikan dengan urutan materi di madrasah anak Anda melalui sheet **BankSoal**.
 | IPA Terintegrasi (KSM) | Sains dalam Al-Qur'an | 9 |
 | IPS Terintegrasi (KSM) | Geografi, Sejarah, dan Ekonomi Islam | 8 |
 
+### KMSI 2026 — Babak Penyisihan, Level 4
+
+Disusun dari kisi-kisi resmi KMSI 2026 (Yayasan Intan Mutia), file `js/soal-kmsi-level4.js`.
+Setiap mapel punya topik **Simulasi Penyisihan** (25 soal acak dari semua indikator)
+dan topik latihan per kelompok indikator.
+
+| Mapel | Topik latihan (indikator kisi-kisi) | Soal |
+|---|---|---|
+| Matematika | Operasi & teori bilangan · Bangun datar & ruang · Persamaan, pola & barisan · Aritmetika sosial & perbandingan · Statistika & peluang | 46 |
+| Sains | Makhluk hidup, kesehatan & tubuh manusia · Ekologi & lingkungan · Genetika & bioteknologi · Zat & perubahan · Energi, gaya & metode ilmiah | 50 |
+| Bahasa Inggris | Vocabulary & word meaning · Grammar (prepositions, past tenses, modals, conditionals, comparison) · Speaking expressions & functional texts · Reading (report, recount/biography, data, public signs) | 50 |
+
+Untuk soal bacaan, tulis teks bacaan lalu baris kosong, kemudian pertanyaannya.
+Aplikasi otomatis menampilkan teks bacaan dalam kotak terpisah.
+Jumlah soal per sesi suatu topik dapat diatur dengan `soalPerSesi`.
+
 ## Fitur
 
 - Masuk dengan nama & kelas (tanpa kata sandi, cocok untuk anak)
