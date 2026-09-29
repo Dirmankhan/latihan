@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Belajar Mandiri</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="brand" data-go="beranda" type="button">📚 <span id="judul-app">Belajar Mandiri</span></button>
+    <nav id="nav" hidden>
+      <button data-go="beranda" type="button">Beranda</button>
+      <button data-go="riwayat" type="button">Riwayat</button>
+      <button id="btn-keluar" type="button">Ganti Nama</button>
+    </nav>
+  </header>
+
+  <div id="status-sync" class="status-sync" hidden></div>
+
+  <main id="app">
+    <!-- Masuk -->
+    <section id="v-masuk" class="view card narrow" hidden>
+      <h1>Halo! 👋</h1>
+      <p class="muted">Tulis namamu dulu sebelum mulai belajar.</p>
+      <form id="form-masuk">
+        <label>Nama
+          <input id="in-nama" required maxlength="40" autocomplete="name" placeholder="Nama lengkap">
+        </label>
+        <label>Kelas
+          <select id="in-kelas" required>
+            <option value="">— pilih kelas —</option>
+            <option>1</option><option>2</option><option>3</option>
+            <option>4</option><option>5</option><option>6</option>
+            <option>7</option><option>8</option><option>9</option>
+            <option>10</option><option>11</option><option>12</option>
+          </select>
+        </label>
+        <button class="btn primary" type="submit">Mulai Belajar</button>
+      </form>
+    </section>
+
+    <!-- Beranda -->
+    <section id="v-beranda" class="view" hidden>
+      <div class="sapaan">
+        <h1 id="teks-sapaan"></h1>
+        <p class="muted" id="teks-motivasi"></p>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div id="daftar-mapel"></div>
+    </section>
+
+    <!-- Materi -->
+    <section id="v-materi" class="view card" hidden>
+      <button class="link" data-go="beranda" type="button">← Kembali</button>
+      <p class="chip" id="materi-mapel"></p>
+      <h1 id="materi-judul"></h1>
+      <article id="materi-isi" class="materi"></article>
+      <div class="aksi">
+        <button class="btn primary" id="btn-mulai-dari-materi" type="button">Mulai Latihan ✏️</button>
+      </div>
+    </section>
+
+    <!-- Kuis -->
+    <section id="v-kuis" class="view card" hidden>
+      <div class="kuis-atas">
+        <span id="kuis-info"></span>
+        <span id="kuis-timer" class="timer">00:00</span>
+      </div>
+      <div class="progress"><div id="kuis-progress"></div></div>
+      <div id="kuis-nomor" class="nomor-soal"></div>
+      <h2 id="kuis-pertanyaan" class="pertanyaan"></h2>
+      <div id="kuis-jawaban"></div>
+      <div class="aksi spread">
+        <button class="btn" id="btn-sebelum" type="button">← Sebelumnya</button>
+        <button class="btn primary" id="btn-berikut" type="button">Berikutnya →</button>
+      </div>
+    </section>
+
+    <!-- Hasil -->
+    <section id="v-hasil" class="view card" hidden>
+      <div class="hasil-atas">
+        <div id="hasil-bintang" class="bintang"></div>
+        <div id="hasil-nilai" class="nilai-besar"></div>
+        <p id="hasil-pesan"></p>
+        <p id="hasil-sync" class="muted small"></p>
+      </div>
+      <div class="aksi center">
+        <button class="btn" id="btn-ulang-salah" type="button">Ulangi yang Salah</button>
+        <button class="btn" id="btn-ulang" type="button">Latihan Lagi</button>
+        <button class="btn primary" data-go="beranda" type="button">Beranda</button>
+      </div>
+      <h2>Pembahasan</h2>
+      <ol id="hasil-pembahasan" class="pembahasan"></ol>
+    </section>
+
+    <!-- Riwayat -->
+    <section id="v-riwayat" class="view card" hidden>
+      <h1>Riwayat Latihan</h1>
+      <p class="muted small" id="riwayat-sumber"></p>
+      <div class="tabel-wrap">
+        <table>
+          <thead><tr><th>Tanggal</th><th>Mapel</th><th>Topik</th><th>Benar</th><th>Nilai</th></tr></thead>
+          <tbody id="riwayat-isi"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/bank-soal.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
