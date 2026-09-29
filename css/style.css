@@ -124,6 +124,7 @@ form .btn { width: 100%; margin-top: 8px; }
 }
 .topik h3 { margin: 0; font-size: 1.05rem; }
 .topik .meta { color: var(--muted); font-size: .85rem; }
+.topik .sumber { color: var(--muted); font-size: .78rem; font-style: italic; }
 .topik .tombol { display: flex; gap: 8px; margin-top: auto; flex-wrap: wrap; }
 .badge { display: inline-block; font-size: .78rem; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
 .badge.tuntas { background: var(--ok-soft); color: var(--ok); }

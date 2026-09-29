@@ -129,7 +129,12 @@
       t.soal = m.topik.filter((x) => !x.simulasi).flatMap((x) => x.soal)
         .filter((q) => !sudah.has(q.pertanyaan) && sudah.add(q.pertanyaan));
     }));
-    return bank.filter((m) => m.topik.some((t) => t.soal.length || t.materi));
+    // Urutkan mapel pelajaran sesuai urutan rapor (file soal-buku dimuat setelah bank-soal).
+    const urutan = window.URUTAN_MAPEL || [];
+    const posisi = (m) => { const i = urutan.indexOf(m.mapel); return i === -1 ? urutan.length : i; };
+    const pelajaran = bank.filter((m) => m.kategori === 'pelajaran').sort((a, b) => posisi(a) - posisi(b));
+    const hasil = pelajaran.concat(bank.filter((m) => m.kategori !== 'pelajaran'));
+    return hasil.filter((m) => m.topik.some((t) => t.soal.length || t.materi));
   }
 
   async function muatBank() {
@@ -307,6 +312,7 @@
         const kartu = el('div', { class: 'topik' }, `
           <h3>${esc(t.nama)}</h3>
           <div class="meta">${t.kelas ? (/^\d/.test(t.kelas) ? 'Kelas ' : '') + esc(t.kelas) + ' · ' : ''}${t.soal.length} soal${t.soalPerSesi ? ' · ' + Math.min(t.soalPerSesi, t.soal.length) + ' soal per sesi' : ''}</div>
+          ${t.sumber ? `<div class="sumber">📚 ${esc(t.sumber)}</div>` : ''}
           <div>${badge}</div>
           <div class="tombol"></div>`);
         const tombol = kartu.querySelector('.tombol');

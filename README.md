@@ -17,13 +17,30 @@ Statistik di beranda dihitung per kategori. Di Google Sheet, setiap hasil latiha
 juga dicatat kategori dan kompetisinya (kolom **Kategori** dan **Kompetisi** pada sheet Hasil dan Rincian), dan sheet
 **Ringkasan** merekap nilai per kategori.
 
-## Isi Bawaan: Materi Pelajaran Kelas 7 (1 MTs), Semester 1
+## Isi Bawaan: Materi Pelajaran Kelas 7 (1 MTs), Semester 1 & 2
+
+### Berbasis buku teks resmi Kemendikdasmen (folder `js/soal-buku/`)
+
+Setiap topik mengikuti bab di buku. Kartu topik menampilkan sumbernya (📚), dan setiap
+pembahasan soal mencantumkan halaman buku (📖 hlm. …) sehingga anak bisa membaca ulang bagian itu.
+Semua bab dimasukkan, termasuk semester 2, supaya anak bisa berlatih lebih dulu.
+
+| Mapel | Buku rujukan | Topik | Soal |
+|---|---|---|---|
+| Matematika | Buku Siswa Matematika Kelas VII (Dicky Susanto dkk., 2022) | Bab 1–6 (7 topik) | 95 |
+| IPA | Buku Siswa IPA Kelas VII Edisi Revisi (Victoriani Inabuy dkk., 2023) | Bab I–VII (8 topik) | 114 |
+| IPS | Buku Siswa IPS Kelas VII (Tema I) + Buku Panduan Guru (Tema II–IV) | 5 topik | 58 |
+| Pendidikan Agama Islam | Buku Siswa PAI Kelas VII (Bab I–III) + Buku Panduan Guru (Bab IV–X) | 10 topik | 83 |
+| Koding dan Kecerdasan Artifisial | Buku Siswa KKA Kelas VII (Bab 1–2) + Buku Panduan Guru (Bab 2–4) | 5 topik | 80 |
+
+> Bagian yang disusun dari **Buku Panduan Guru** memakai materi pokok, contoh jawaban, dan kunci
+> jawaban di buku guru, karena berkas Buku Siswa bab tersebut tidak dapat diunduh. Nomor halaman
+> di pembahasannya diberi tanda `(BG)`.
+
+### Soal umum (file `js/bank-soal.js`)
 
 | Mapel | Topik | Soal |
 |---|---|---|
-| Matematika | Bilangan Bulat; Rasio dan Perbandingan | 10 + 8 |
-| IPA | Besaran, Satuan, dan Metode Ilmiah; Zat dan Perubahannya | 9 + 8 |
-| IPS | Letak Wilayah Indonesia | 8 |
 | Bahasa Indonesia | Teks Deskripsi | 7 |
 | Bahasa Inggris | About Me (Simple Present) | 8 |
 | Al-Qur'an Hadis | Hukum Nun Mati dan Tanwin | 8 |
@@ -129,7 +146,9 @@ agar terasa seperti aplikasi.
 - Sheet **Materi**: kolom Mapel, Topik, Kelas, Materi, Kategori, Kompetisi. Di teks materi, baris kosong
   = paragraf baru, awali baris dengan `- ` untuk daftar, `**teks**` untuk tebal.
 
-Soal bawaan juga bisa diubah di [`js/bank-soal.js`](js/bank-soal.js).
+Soal bawaan juga bisa diubah di [`js/bank-soal.js`](js/bank-soal.js) dan file di folder
+[`js/soal-buku/`](js/soal-buku/) (satu file per mapel; `BUKU.pg(...)` / `BUKU.isian(...)`
+menerima nomor halaman buku sebagai argumen terakhir).
 
 ## Pengaturan Lain (`js/config.js`)
 - `KKTP` — nilai minimal agar topik ditandai **Tuntas** (bawaan 75)
@@ -141,7 +160,9 @@ Soal bawaan juga bisa diubah di [`js/bank-soal.js`](js/bank-soal.js).
 index.html            Tampilan aplikasi
 css/style.css         Gaya tampilan (mendukung mode gelap)
 js/config.js          Pengaturan (URL Apps Script, token, KKTP)
-js/bank-soal.js       Materi & soal bawaan
+js/bank-soal.js       Materi & soal bawaan (umum + KSM)
+js/soal-buku/         Soal berbasis buku teks kelas 7 (Matematika, IPA, IPS, PAI, KKA)
+js/soal-kmsi-level4.js Soal KMSI 2026 Level 4
 js/app.js             Logika aplikasi
 apps-script/Code.gs   Backend Google Sheet
 ```
