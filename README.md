@@ -153,6 +153,18 @@ Jumlah soal per sesi suatu topik dapat diatur dengan `soalPerSesi`.
 - Soal baru bisa ditambah **langsung di Google Sheet** (sheet **BankSoal** & **Materi**)
 - Tetap bisa dipakai saat internet putus — hasil disimpan dulu lalu dikirim otomatis
 
+## Kecepatan & Pasang di HP
+
+- Setelah dibuka sekali, file aplikasi disimpan di perangkat (service worker `sw.js`), sehingga
+  aplikasi terbuka dalam hitungan detik walau sinyal lemah, bahkan tanpa internet. Soal, paket,
+  daftar siswa, dan rekap admin ditampilkan dari data terakhir, lalu diperbarui di belakang layar.
+- Hasil latihan yang dikerjakan tanpa internet dikirim otomatis saat online kembali.
+- Gambar soal disimpan di perangkat setelah sekali dimuat; gambar satu sesi kuis dimuat sejak awal.
+- **Pasang seperti aplikasi:** di Chrome Android buka menu ⋮ → **Instal aplikasi / Tambahkan ke layar
+  utama**; di iPhone (Safari) tombol Bagikan → **Tambah ke Layar Utama**.
+- Yang tetap butuh internet: login, menyimpan soal/paket, dan mengirim hasil. Kecepatannya
+  bergantung pada Google Apps Script (biasanya 1–3 detik per permintaan).
+
 ## Langkah Pemasangan (± 10 menit)
 
 ### 1. Siapkan Google Sheet + Apps Script
@@ -236,6 +248,8 @@ js/bank-soal.js       Materi & soal bawaan (umum + KSM)
 js/soal-buku/         Soal berbasis buku teks kelas 7 (Matematika, IPA, IPS, PAI, KKA)
 js/soal-kmsi-level4.js Soal KMSI 2026 Level 4
 js/impor-soal.js      Pembaca soal dari teks/Word/PDF (admin)
+sw.js                 Service worker: menyimpan aplikasi di perangkat agar cepat dibuka
+manifest.webmanifest  Agar bisa dipasang di layar utama HP (ikon di folder img/)
 js/vendor/            mammoth.js (Word) & pdf.js (PDF), beserta lisensinya
 js/app.js             Logika aplikasi
 apps-script/Code.gs   Backend Google Sheet

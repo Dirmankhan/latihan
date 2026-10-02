@@ -403,11 +403,15 @@ function doPost(e) {
       const lock = LockService.getScriptLock();
       lock.waitLock(20000);
       try {
-        if (aksi === 'soal-simpan') return json_({ ok: true, jumlah: simpanSoal_(ss, data) });
+        // Jawaban sekaligus membawa bank soal, materi, dan paket terbaru (hemat satu permintaan lagi).
+        const terbaru = function (jumlah) {
+          return json_({ ok: true, jumlah: jumlah, soal: bacaTabel_(ss, SHEET_SOAL), materi: bacaTabel_(ss, SHEET_MATERI), paket: bacaPaket_(ss) });
+        };
+        if (aksi === 'soal-simpan') return terbaru(simpanSoal_(ss, data));
         const t = { mapel: data.mapel, topik: data.topik, kompetisi: String(data.kompetisi || ''), kategori: data.kategori };
         const lama = hapusBarisTopik_(siapkanSheet_(ss, SHEET_SOAL, HEADER_SOAL), t, 11, 12);
         buangGambar_(lama, []);
-        return json_({ ok: true, jumlah: lama.length + hapusBarisTopik_(siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI), t, 4, 5).length });
+        return terbaru(lama.length + hapusBarisTopik_(siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI), t, 4, 5).length);
       } finally {
         lock.releaseLock();
       }

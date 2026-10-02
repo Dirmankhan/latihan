@@ -3,7 +3,7 @@
 
   const CFG = window.LMS_CONFIG || {};
   const HURUF = ['A', 'B', 'C', 'D', 'E'];
-  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab', kompetisi: 'lms_kompetisi', daftarSiswa: 'lms_daftar_siswa' };
+  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab', kompetisi: 'lms_kompetisi', daftarSiswa: 'lms_daftar_siswa', rekapAdmin: 'lms_rekap_admin' };
   const KATEGORI = {
     pelajaran: { label: 'Materi Pelajaran', ikon: '📘', ajakan: 'Pelajari materi sekolah dan latih pemahamanmu.' },
     lomba: { label: 'Persiapan Lomba', ikon: '🏆', ajakan: 'Latihan soal per kompetisi (KMSI, KSM, dan lainnya). Semangat, calon juara!' },
@@ -153,15 +153,16 @@
       const url = CFG.APPS_SCRIPT_URL + '?action=soal&token=' + encodeURIComponent(CFG.TOKEN);
       const res = await fetch(url);
       const data = await res.json();
-      if (data.ok) {
-        // Teks yang diawali "=" disimpan dengan tanda petik agar tidak dibaca sebagai rumus.
-        const bersih = (rows) => (rows || []).map((r) => r.map((x) => (typeof x === 'string' ? x.replace(/^'(?==)/, '') : x)));
-        data.soal = bersih(data.soal);
-        data.materi = bersih(data.materi);
-        simpan.set(KUNCI.soalSheet, { soal: data.soal, materi: data.materi });
-        state.bank = gabungBank(data);
-      }
+      if (data.ok) terimaSoalSheet(data);
     } catch (e) { /* offline: pakai cache */ }
+  }
+
+  function terimaSoalSheet(data) {
+    // Teks yang diawali "=" disimpan dengan tanda petik agar tidak dibaca sebagai rumus.
+    const bersih = (rows) => (rows || []).map((r) => r.map((x) => (typeof x === 'string' ? x.replace(/^'(?==)/, '') : x)));
+    const isi = { soal: bersih(data.soal), materi: bersih(data.materi) };
+    simpan.set(KUNCI.soalSheet, isi);
+    state.bank = gabungBank(isi);
   }
 
   function cariTopik(id) {
@@ -441,6 +442,8 @@
     if (!x) return;
     state.topikAktif = id;
     const sumber = daftarSoal || acak(x.topik.soal).slice(0, x.topik.soalPerSesi || CFG.SOAL_PER_SESI || 10);
+    // Muat semua gambar sesi ini sejak awal agar tidak menunggu saat pindah soal.
+    sumber.forEach((q) => { const u = urlGambar(q.gambar); if (u) new Image().src = u; });
     state.sesi = {
       idSesi: idSesiBaru(), kategori: x.mapel.kategori, kompetisi: x.mapel.kompetisi, mapel: x.mapel.mapel, topik: x.topik.nama,
       soal: sumber.map(siapkanSoal), jawaban: [], indeks: 0, mulai: Date.now(), selesai: false,
@@ -686,6 +689,7 @@
   function keluar() {
     state.profil = null;
     state.admin = null;
+    simpan.set(KUNCI.rekapAdmin, null);
     simpan.set(KUNCI.profil, null);
     tampil('masuk');
   }
@@ -711,9 +715,16 @@
   }
 
   async function renderAdmin() {
-    $('#admin-info').textContent = 'Memuat data dari Google Sheet…';
+    // Tampilkan data terakhir dulu agar halaman langsung terisi, lalu perbarui dari Google Sheet.
+    const cache = simpan.get(KUNCI.rekapAdmin, null);
+    if (cache && !state.admin) terimaDataAdmin(cache);
+    const info = $('#admin-info');
+    if (state.admin) info.insertAdjacentHTML('beforeend', ' <span class="muted">· memperbarui…</span>');
+    else info.textContent = 'Memuat data dari Google Sheet…';
     try {
-      terimaDataAdmin(await api('rekap', { sesi: state.profil.sesi }));
+      const d = await api('rekap', { sesi: state.profil.sesi });
+      simpan.set(KUNCI.rekapAdmin, d);
+      terimaDataAdmin(d);
     } catch (e) {
       if (e instanceof GalatSesi) { sesiBerakhir(); return; }
       $('#admin-info').textContent = '⚠️ Gagal memuat data: ' + (e instanceof TypeError ? 'periksa koneksi internet.' : e.message);
@@ -1046,8 +1057,9 @@
   async function hapusTopikSheet(t) {
     if (!confirm(`Hapus semua soal buatan admin di topik "${t.topik}" (${t.soal.length} soal)? Tindakan ini tidak bisa dibatalkan.`)) return;
     try {
-      await api('soal-hapus', { sesi: state.profil.sesi, kategori: t.kategori, kompetisi: t.kompetisi, mapel: t.mapel, topik: t.topik });
-      await muatBank();
+      const d = await api('soal-hapus', { sesi: state.profil.sesi, kategori: t.kategori, kompetisi: t.kompetisi, mapel: t.mapel, topik: t.topik });
+      terimaSoalSheet(d);
+      if (state.admin) state.admin.paket = d.paket;
       if (state.editSoal && kunciTopikSheet(t.kategori, t.kompetisi, t.mapel, t.topik) === kunciTopikSheet(state.editSoal.kategori, state.editSoal.kompetisi, state.editSoal.mapel, state.editSoal.topik)) kosongkanFormSoal();
       renderPanelSoal();
       $('#s-pesan').textContent = `✅ Topik "${t.topik}" dihapus dari sheet.`;
@@ -1082,8 +1094,8 @@
         tambahKePaket: topikBaru && $('#s-ke-paket').checked ? idTopik(t.kategori, nama.kompetisi, nama.mapel, nama.topik) : '',
       });
       const diubah = !!state.editSoal;
-      await muatBank();
-      if (topikBaru) { try { terimaDataAdmin(await api('rekap', { sesi: state.profil.sesi })); } catch (err) { /* paket dimuat ulang nanti */ } }
+      terimaSoalSheet(d);
+      if (state.admin) state.admin.paket = d.paket;
       kosongkanFormSoal();
       renderPanelSoal();
       pesan.textContent = `✅ ${d.jumlah} soal ${diubah ? 'diperbarui' : 'tersimpan'} di topik "${nama.topik}".`;

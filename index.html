@@ -4,8 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Belajar Mandiri</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
-  <link rel="stylesheet" href="css/style.css?v=20260929g">
+  <link rel="stylesheet" href="css/style.css?v=20261002a">
 </head>
 <body>
   <header class="topbar">
@@ -282,16 +285,22 @@
     </section>
   </main>
 
-  <script src="js/config.js?v=20260929g"></script>
-  <script src="js/bank-soal.js?v=20260929g"></script>
-  <script src="js/soal-buku/_util.js?v=20260929g"></script>
-  <script src="js/soal-buku/matematika.js?v=20260929g"></script>
-  <script src="js/soal-buku/ipa.js?v=20260929g"></script>
-  <script src="js/soal-buku/ips.js?v=20260929g"></script>
-  <script src="js/soal-buku/pai.js?v=20260929g"></script>
-  <script src="js/soal-buku/kka.js?v=20260929g"></script>
-  <script src="js/soal-kmsi-level4.js?v=20260929g"></script>
-  <script src="js/impor-soal.js?v=20260929g"></script>
-  <script src="js/app.js?v=20260929g"></script>
+  <script src="js/config.js?v=20261002a"></script>
+  <script src="js/bank-soal.js?v=20261002a"></script>
+  <script src="js/soal-buku/_util.js?v=20261002a"></script>
+  <script src="js/soal-buku/matematika.js?v=20261002a"></script>
+  <script src="js/soal-buku/ipa.js?v=20261002a"></script>
+  <script src="js/soal-buku/ips.js?v=20261002a"></script>
+  <script src="js/soal-buku/pai.js?v=20261002a"></script>
+  <script src="js/soal-buku/kka.js?v=20261002a"></script>
+  <script src="js/soal-kmsi-level4.js?v=20261002a"></script>
+  <script src="js/impor-soal.js?v=20261002a"></script>
+  <script src="js/app.js?v=20261002a"></script>
+  <script>
+    // Simpan aplikasi di perangkat agar cepat dibuka (lihat sw.js).
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
 </body>
 </html>
