@@ -735,6 +735,7 @@
   function keluar() {
     state.profil = null;
     state.admin = null;
+    state.mapelTerbuka.clear();
     simpan.set(KUNCI.rekapAdmin, null);
     simpan.set(KUNCI.profil, null);
     tampil('masuk');
@@ -899,7 +900,15 @@
     const ada = topikAda(t);
     $('#dl-topik').innerHTML = opsi(ada.mapel ? ada.mapel.topik.map((x) => x.nama) : []);
     const info = $('#s-info-topik');
-    if (state.editSoal) info.textContent = '✏️ Mengubah topik ini: semua soal & materinya di sheet akan diganti dengan isi formulir.';
+    if (state.editSoal) {
+      const asal = state.editSoal;
+      const kunciAsal = kunciTopikSheet(asal.kategori, asal.kompetisi, asal.mapel, asal.topik);
+      const berubah = t.mapel && t.topik && kunciTopikSheet(t.kategori, t.kompetisi, t.mapel, t.topik) !== kunciAsal;
+      info.textContent = !berubah
+        ? '✏️ Mengubah topik ini: semua soal & materinya di sheet akan diganti dengan isi formulir. Nama topik/mapel juga bisa diperbaiki di atas.'
+        : `✏️ Nama akan diubah dari "${judulMapel(asal.kompetisi, asal.mapel)} · ${asal.topik}" menjadi "${judulMapel(t.kompetisi, t.mapel)} · ${t.topik}". Paket soal dan rekap hasil ikut disesuaikan.` +
+          (ada.topik ? ` ⚠️ Topik "${t.topik}" sudah ada — soal akan digabung ke topik tersebut.` : '');
+    }
     else if (!t.mapel || !t.topik) info.textContent = '';
     else if (ada.topik) {
       info.textContent = `ℹ️ Topik ini sudah ada (${ada.topik.soal.length} soal). Soal baru akan ditambahkan ke topik tersebut.`;
@@ -1086,8 +1095,6 @@
     $('#s-topik').value = t.topik;
     $('#s-kelas').value = t.kelas;
     $('#s-materi').value = t.materi;
-    // Nama topik dikunci saat mengubah agar baris lama di sheet yang diganti.
-    ['#s-kategori', '#s-kompetisi', '#s-mapel', '#s-topik'].forEach((s) => ($(s).disabled = true));
     $('#s-daftar-soal').innerHTML = '';
     t.soal.forEach((r) => {
       const [, , , tipe, pertanyaan, a, b, c, d, jawaban, pembahasan, , , gambar] = r;
@@ -1130,6 +1137,14 @@
     const ada = topikAda(t);
     const nama = { mapel: ada.mapel ? ada.mapel.mapel : t.mapel, topik: ada.topik ? ada.topik.nama : t.topik, kompetisi: ada.mapel ? ada.mapel.kompetisi : t.kompetisi };
     const topikBaru = !ada.topik && !state.editSoal;
+    // Saat mengubah: kirim nama lama agar baris lama diganti, paket & rekap ikut diganti namanya.
+    let asal = null;
+    if (state.editSoal) {
+      const e0 = state.editSoal;
+      const lama = topikAda(e0);
+      asal = { kategori: e0.kategori, kompetisi: e0.kompetisi, mapel: e0.mapel, topik: e0.topik,
+        id: idTopik(e0.kategori, lama.mapel ? lama.mapel.kompetisi : e0.kompetisi, lama.mapel ? lama.mapel.mapel : e0.mapel, lama.topik ? lama.topik.nama : e0.topik) };
+    }
     const tombol = $('#s-simpan');
     tombol.disabled = true;
     pesan.textContent = 'Menyimpan ke Google Sheet…';
@@ -1138,10 +1153,23 @@
         sesi: state.profil.sesi, kategori: t.kategori, kompetisi: nama.kompetisi, mapel: nama.mapel, topik: nama.topik,
         kelas: $('#s-kelas').value.trim(), materi: $('#s-materi').value.trim(), soal, ganti: !!state.editSoal,
         tambahKePaket: topikBaru && $('#s-ke-paket').checked ? idTopik(t.kategori, nama.kompetisi, nama.mapel, nama.topik) : '',
+        asal, idBaru: idTopik(t.kategori, nama.kompetisi, nama.mapel, nama.topik),
       });
       const diubah = !!state.editSoal;
       terimaSoalSheet(d);
-      if (state.admin) state.admin.paket = d.paket;
+      if (state.admin) {
+        state.admin.paket = d.paket;
+        // Nama topik diperbaiki: samakan juga data rekap yang sudah dimuat (server sudah mengubah sheet Hasil).
+        if (asal && asal.id !== idTopik(t.kategori, nama.kompetisi, nama.mapel, nama.topik)) {
+          (state.admin.hasil || []).forEach((h) => {
+            if (kunciTopikSheet(h.kategori, h.kompetisi, h.mapel, h.topik) === kunciTopikSheet(asal.kategori, asal.kompetisi, asal.mapel, asal.topik)) {
+              Object.assign(h, { mapel: nama.mapel, topik: nama.topik, kompetisi: nama.kompetisi, kategori: KATEGORI[t.kategori].label });
+            }
+          });
+          simpan.set(KUNCI.rekapAdmin, state.admin);
+          renderRekap();
+        }
+      }
       kosongkanFormSoal();
       renderPanelSoal();
       pesan.textContent = `✅ ${d.jumlah} soal ${diubah ? 'diperbarui' : 'tersimpan'} di topik "${nama.topik}".`;

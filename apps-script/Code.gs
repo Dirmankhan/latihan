@@ -300,6 +300,40 @@ function tulisBaris_(sh, baris) {
   rg.setValues(baris);
 }
 
+/** Nama topik diperbaiki: sesuaikan rekap (Hasil & Rincian) dan paket soal yang memakai nama lama. */
+function gantiNamaTopik_(ss, lama, baru, idLama, idBaru) {
+  const label = function (k) { return k === 'lomba' ? 'Persiapan Lomba' : 'Materi Pelajaran'; };
+  // [sheet, kolom mapel, kolom topik, kolom kategori, kolom kompetisi] (mulai 0)
+  [[SHEET_HASIL, 3, 4, 11, 12], [SHEET_RINCIAN, 2, 3, 10, 11]].forEach(function (c) {
+    const sh = ss.getSheetByName(c[0]);
+    if (!sh || sh.getLastRow() < 2) return;
+    const rg = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn());
+    const nilai = rg.getValues();
+    let ubah = false;
+    nilai.forEach(function (r) {
+      const kategori = String(r[c[4]] || '').trim() ? 'lomba' : kodeKategori_(r[c[3]]);
+      if (sama_(r[c[1]], lama.mapel) && sama_(r[c[2]], lama.topik) && sama_(r[c[4]], lama.kompetisi) && kategori === lama.kategori) {
+        r[c[1]] = baru.mapel; r[c[2]] = baru.topik; r[c[4]] = baru.kompetisi; r[c[3]] = label(baru.kategori);
+        ubah = true;
+      }
+    });
+    if (ubah) rg.setValues(nilai);
+  });
+  if (idLama && idBaru && idLama !== idBaru) {
+    const sh = ss.getSheetByName(SHEET_PAKET);
+    if (sh && sh.getLastRow() > 1) {
+      const rg = sh.getRange(2, 4, sh.getLastRow() - 1, 1);
+      rg.setValues(rg.getValues().map(function (r) {
+        let daftar = [];
+        try { daftar = JSON.parse(r[0] || '[]'); } catch (err) { daftar = []; }
+        const i = daftar.indexOf(idLama);
+        if (i !== -1) { daftar.splice(i, 1); if (daftar.indexOf(idBaru) === -1) daftar.push(idBaru); }
+        return [JSON.stringify(daftar)];
+      }));
+    }
+  }
+}
+
 function simpanSoal_(ss, d) {
   const t = { mapel: String(d.mapel || '').trim(), topik: String(d.topik || '').trim(),
     kompetisi: String(d.kompetisi || '').trim(), kategori: d.kompetisi ? 'lomba' : kodeKategori_(d.kategori) };
@@ -325,9 +359,18 @@ function simpanSoal_(ss, d) {
 
   const bank = siapkanSheet_(ss, SHEET_SOAL, HEADER_SOAL);
   const materi = siapkanSheet_(ss, SHEET_MATERI, HEADER_MATERI);
+  // Saat mengubah, baris lama dicari dengan nama asal (nama topik/mapel boleh diperbaiki).
+  const a = d.asal || {};
+  const asal = d.ganti && a.mapel && a.topik
+    ? { mapel: String(a.mapel).trim(), topik: String(a.topik).trim(), kompetisi: String(a.kompetisi || '').trim(),
+      kategori: a.kompetisi ? 'lomba' : kodeKategori_(a.kategori) }
+    : t;
   if (d.ganti) {
-    buangGambar_(hapusBarisTopik_(bank, t, 11, 12), gambar);
-    hapusBarisTopik_(materi, t, 4, 5);
+    buangGambar_(hapusBarisTopik_(bank, asal, 11, 12), gambar);
+    hapusBarisTopik_(materi, asal, 4, 5);
+    if (asal !== t && !(sama_(asal.mapel, t.mapel) && sama_(asal.topik, t.topik) && sama_(asal.kompetisi, t.kompetisi) && asal.kategori === t.kategori)) {
+      gantiNamaTopik_(ss, asal, t, a.id, d.idBaru);
+    }
   }
   tulisBaris_(bank, soal.map(function (q, i) {
     const p = q.tipe === 'pg' ? (q.pilihan || []).filter(function (x) { return String(x).trim(); }) : [];

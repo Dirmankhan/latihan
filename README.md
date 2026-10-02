@@ -21,6 +21,8 @@ perkembangan belajar dari HP atau laptop.
     dan pembahasan. Soal tersimpan di sheet **BankSoal**/**Materi**. Topik baru otomatis dimasukkan ke
     paket yang sudah ada (bisa dimatikan). Topik buatan admin bisa **diubah** atau **dihapus** dari
     daftar *Soal Buatan Admin*; soal bawaan dari buku tidak bisa diubah di sini.
+    Saat **Ubah**, nama mapel/topik/kategori/kompetisi boleh diperbaiki (mis. salah ketik); paket soal
+    serta riwayat di sheet Hasil dan Rincian ikut memakai nama baru.
     **📥 Impor banyak soal sekaligus**: salin-tempel teks dari Word/Google Docs, atau pilih file
     **.docx**, **.pdf** (berisi teks, bukan hasil scan), atau **.txt**. Format yang dikenali:
 
