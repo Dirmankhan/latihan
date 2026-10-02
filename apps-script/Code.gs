@@ -11,7 +11,7 @@
  */
 
 // Kode rahasia sederhana agar tidak sembarang orang bisa memakai backend ini.
-const TOKEN = 'ganti-dengan-kode-rahasia';
+const TOKEN = 'bilaladam';
 // Password untuk masuk sebagai admin (orang tua/guru). Wajib diganti.
 const ADMIN_PASSWORD = 'ganti-password-admin';
 // Lama login tetap aktif (hari).
