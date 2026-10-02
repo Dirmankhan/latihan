@@ -144,7 +144,10 @@ Jumlah soal per sesi suatu topik dapat diatur dengan `soalPerSesi`.
 
 - Masuk dengan nama & kelas (tanpa kata sandi, cocok untuk anak)
 - Materi ringkas per topik, lalu latihan soal **pilihan ganda** dan **isian**
-- Soal & pilihan jawaban diacak setiap latihan
+- Soal & pilihan jawaban diacak setiap latihan. Satu latihan berisi `SOAL_PER_SESI` soal (bawaan 10);
+  soal yang **belum pernah keluar diutamakan**, lalu yang pernah salah, sehingga dalam beberapa kali
+  latihan semua soal topik itu terkerjakan. Kartu topik menampilkan "Sudah dicoba X dari Y soal",
+  dan tombol **📋 Semua** untuk mengerjakan seluruh soal topik sekaligus
 - Timer, navigasi nomor soal, nilai, bintang ⭐, dan **pembahasan** tiap soal
 - Tombol **"Ulangi yang Salah"** untuk mengulang soal yang keliru
 - Beranda: jumlah latihan, rata-rata nilai, topik tuntas (≥ KKTP), hari beruntun 🔥

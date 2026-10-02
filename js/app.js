@@ -3,7 +3,7 @@
 
   const CFG = window.LMS_CONFIG || {};
   const HURUF = ['A', 'B', 'C', 'D', 'E'];
-  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab', kompetisi: 'lms_kompetisi', daftarSiswa: 'lms_daftar_siswa', rekapAdmin: 'lms_rekap_admin' };
+  const KUNCI = { profil: 'lms_profil', riwayat: 'lms_riwayat', antrian: 'lms_antrian', soalSheet: 'lms_soal_sheet', tab: 'lms_tab', kompetisi: 'lms_kompetisi', daftarSiswa: 'lms_daftar_siswa', rekapAdmin: 'lms_rekap_admin', jejak: 'lms_jejak_soal' };
   const KATEGORI = {
     pelajaran: { label: 'Materi Pelajaran', ikon: '📘', ajakan: 'Pelajari materi sekolah dan latih pemahamanmu.' },
     lomba: { label: 'Persiapan Lomba', ikon: '🏆', ajakan: 'Latihan soal per kompetisi (KMSI, KSM, dan lainnya). Semangat, calon juara!' },
@@ -297,6 +297,12 @@
     return { riwayat, terbaik, beruntun, rata };
   }
 
+  // Jumlah soal berbeda di topik ini yang pernah dikerjakan siswa (di perangkat ini).
+  function dicoba(id, t) {
+    const j = jejakTopik(id);
+    return t.soal.filter((q) => j[kodeSoal(q)]).length;
+  }
+
   function riwayatLokal() {
     const p = state.profil;
     return simpan.get(KUNCI.riwayat, []).filter((r) => r.nama === p.nama && (!r.sekolah || r.sekolah === p.sekolah));
@@ -395,7 +401,8 @@
             : `<span class="badge belum">Terbaik ${nilai}</span>`;
         const kartu = el('div', { class: 'topik' }, `
           <h3>${esc(t.nama)}</h3>
-          <div class="meta">${t.kelas ? (/^\d/.test(t.kelas) ? 'Kelas ' : '') + esc(t.kelas) + ' · ' : ''}${t.soal.length} soal${t.soalPerSesi ? ' · ' + Math.min(t.soalPerSesi, t.soal.length) + ' soal per sesi' : ''}</div>
+          <div class="meta">${t.kelas ? (/^\d/.test(t.kelas) ? 'Kelas ' : '') + esc(t.kelas) + ' · ' : ''}${t.soal.length} soal${t.soal.length > jumlahPerSesi(t) ? ' · ' + jumlahPerSesi(t) + ' soal per latihan' : ''}</div>
+          ${t.soal.length > jumlahPerSesi(t) ? `<div class="meta">Sudah dicoba ${dicoba(id, t)} dari ${t.soal.length} soal</div>` : ''}
           ${t.sumber ? `<div class="sumber">📚 ${esc(t.sumber)}</div>` : ''}
           <div>${badge}</div>
           <div class="tombol"></div>`);
@@ -406,9 +413,15 @@
           tombol.appendChild(b);
         }
         if (t.soal.length) {
-          const b = el('button', { class: 'btn sm primary', type: 'button' }, '✏️ Latihan');
+          const n = jumlahPerSesi(t);
+          const b = el('button', { class: 'btn sm primary', type: 'button' }, n < t.soal.length ? `✏️ Latihan (${n})` : '✏️ Latihan');
           b.onclick = () => mulaiKuis(id);
           tombol.appendChild(b);
+          if (n < t.soal.length) {
+            const semua = el('button', { class: 'btn sm', type: 'button', title: 'Kerjakan semua soal di topik ini' }, `📋 Semua (${t.soal.length})`);
+            semua.onclick = () => mulaiKuis(id, acak(t.soal));
+            tombol.appendChild(semua);
+          }
         }
         grid.appendChild(kartu);
       });
@@ -437,11 +450,43 @@
     return Object.assign({}, s, { pilihanAcak: acak(s.pilihan), kunciTeks });
   }
 
+  // ---------- Jejak soal per siswa: soal yang belum pernah keluar diutamakan ----------
+  function kodeSoal(q) {
+    let h = 0;
+    const t = q.pertanyaan + '|' + (q.pilihan || []).join('|');
+    for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  }
+  function jejakTopik(id) {
+    const semua = simpan.get(KUNCI.jejak, {});
+    const p = state.profil || {};
+    return (semua[p.nama + '|' + p.sekolah] || {})[id] || {};
+  }
+  function catatJejak(id, soal, benar) {
+    const semua = simpan.get(KUNCI.jejak, {});
+    const p = state.profil || {};
+    const k = p.nama + '|' + p.sekolah;
+    semua[k] = semua[k] || {};
+    const j = semua[k][id] = semua[k][id] || {};
+    soal.forEach((q, i) => { j[kodeSoal(q)] = { b: benar[i] ? 1 : 0, t: Date.now() }; });
+    simpan.set(KUNCI.jejak, semua);
+  }
+  const jumlahPerSesi = (t) => Math.min(t.soalPerSesi || CFG.SOAL_PER_SESI || 10, t.soal.length);
+
+  // Urutan pilihan soal: belum pernah keluar → pernah salah → sudah benar (yang paling lama dulu).
+  function pilihSoal(id, daftar, n) {
+    const j = jejakTopik(id);
+    const grup = [[], [], []];
+    acak(daftar).forEach((q) => { const r = j[kodeSoal(q)]; grup[!r ? 0 : r.b ? 2 : 1].push(q); });
+    grup[2].sort((a, b) => j[kodeSoal(a)].t - j[kodeSoal(b)].t);
+    return acak(grup.flat().slice(0, n));
+  }
+
   function mulaiKuis(id, daftarSoal) {
     const x = cariTopik(id);
     if (!x) return;
     state.topikAktif = id;
-    const sumber = daftarSoal || acak(x.topik.soal).slice(0, x.topik.soalPerSesi || CFG.SOAL_PER_SESI || 10);
+    const sumber = daftarSoal || pilihSoal(id, x.topik.soal, jumlahPerSesi(x.topik));
     // Muat semua gambar sesi ini sejak awal agar tidak menunggu saat pindah soal.
     sumber.forEach((q) => { const u = urlGambar(q.gambar); if (u) new Image().src = u; });
     state.sesi = {
@@ -544,6 +589,7 @@
       nilai: Math.round(benar / s.soal.length * 100), durasiDetik: Math.round((Date.now() - s.mulai) / 1000), rincian,
     };
 
+    catatJejak(state.topikAktif, s.soal, rincian.map((r) => r.benar));
     const riwayat = simpan.get(KUNCI.riwayat, []);
     riwayat.push(Object.assign({}, hasil, { rincian: undefined, sesi: undefined }));
     simpan.set(KUNCI.riwayat, riwayat.slice(-500));
